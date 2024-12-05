@@ -1,12 +1,12 @@
 {
   "name": "access_crate_backend",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "dist/index.js",
   "type": "module",
   "scripts": {
     "start": "node dist/index.js",
     "build": "tsc",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+"dev": "ts-node-dev --loader ts-node/esm --respawn --transpile-only src/index.ts"
   },
   "keywords": [],
   "author": "",
