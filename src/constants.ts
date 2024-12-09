@@ -1,1 +1,0 @@
-export const DB_NAME : string | undefined = "access_crate_db";

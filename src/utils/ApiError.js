@@ -1,18 +1,11 @@
 class ApiError {
-  success: boolean;
-  message: string;
-  data: any;
-  statusCode: number;
-  errors: any[];
-  stack?: string;
-
   constructor(
-    success: boolean,
-    message: string = "Something went wrong",
-    data: any = null,
-    statusCode: number = 500,
-    errors: any[] = [],
-    stack?: string
+    success,
+    message = "Something went wrong",
+    data,
+    statusCode = 500,
+    errors = [],
+    stack
   ) {
     this.success = success;
     this.message = message;
@@ -27,3 +20,5 @@ class ApiError {
     }
   }
 }
+
+export default ApiError;
