@@ -99,7 +99,7 @@ export const loginUser = asycHandler(async (req, res) => {
     throw new ApiError(false, "User not registered", null, 404);
   }
 
-  const isPasswordCorrect = await User.isPasswordCorrect(password);
+  const isPasswordCorrect = user.isPasswordCorrect(password);
 
   if (!isPasswordCorrect) {
     throw new ApiError(false, "Incorrect password", null, 401);
@@ -110,7 +110,7 @@ export const loginUser = asycHandler(async (req, res) => {
   );
 
   const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken"
+    "-password -refreshtoken -__v"
   );
 
   if (!loggedInUser) {
@@ -131,5 +131,12 @@ export const loginUser = asycHandler(async (req, res) => {
     .status(200)
     .cookie("refreshToken", refreshToken, options)
     .cookie("accessToken", accessToken, options)
-    .json(new ApiResponse(true, "User Login successfull", loggedInUser, 200));
+    .json(
+      new ApiResponse(
+        true,
+        "User Login successfull",
+        { user: loggedInUser, accessToken, refreshToken },
+        200
+      )
+    );
 });
