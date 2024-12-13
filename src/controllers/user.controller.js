@@ -140,3 +140,13 @@ export const loginUser = asycHandler(async (req, res) => {
       )
     );
 });
+
+export const getUsers = asycHandler(async (req, res) => {
+  const users = await User.find().select(
+    "-password -refreshtoken -__v -accessToken"
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(true, "Users fetched successfully", users, 200));
+});
