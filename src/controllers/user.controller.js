@@ -150,3 +150,65 @@ export const getUsers = asycHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(true, "Users fetched successfully", users, 200));
 });
+
+export const logoutUser = asycHandler(async (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: { refreshtoken: undefined },
+    },
+    {
+      new: true,
+    }
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .clearCookie("refreshToken", options)
+    .clearCookie("accessToken", options)
+    .json(new ApiResponse(true, "User logged out successfully", {}, 200));
+});
+
+export const getCurrentUser = asycHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select(
+    "-password -refreshtoken -__v"
+  );
+
+  if (!user) {
+    throw new ApiError(false, "User not found", null, 404);
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(true, "User fetched successfully", user, 200));
+});
+
+export const updateUserProfile = asycHandler(async (req, res) => {
+  const { full_name, contact_info, address } = req.body;
+
+  const pofilePicPath = req.file?.path;
+
+  const profileImageCloudinaryResponse =
+    await uploadOnCloudinary(pofilePicPath);
+
+  const user = await User.findByIdAndUpdate(req.user._id, {
+    $set: {
+      full_name,
+      contact_info,
+      address,
+      profile_pic: profileImageCloudinaryResponse.url,
+    },
+  });
+
+  if (!user) {
+    throw new ApiError(false, "User not found", null, 404);
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(true, "User updated successfully", user, 200));
+});

@@ -1,13 +1,27 @@
-import multer from "multer";
+import jwt from "jsonwebtoken";
+import { asycHandler } from "../utils/asyncHandler.js";
+import User from "../models/user.model.js";
 
-const storage = multer.diskStorage({
+export const verifyJwt = asycHandler(async (req, res, next) => {
+  try {
+    const token =
+      req.cookies.accessToken ||
+      req.header("Authorization")?.replace("Bearer", "");
 
-  destination: function (req, _, cb) {
-    cb(null, "./public/temp");
-  },
-  filename: function (req, file, cb) {
-    cb(null, file.originalname);
-  },
+    if (!token) {
+      throw new Error("Unauthorized");
+    }
+
+    const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+
+    const user = await User.findById(decodedToken._id).select(
+      "-password -refreshtoken -__v"
+    );
+
+    req.user = user;
+
+    next();
+  } catch (error) {
+    throw error;
+  }
 });
-
-export const upload = multer({ storage });
