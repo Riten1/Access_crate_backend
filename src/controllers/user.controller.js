@@ -218,3 +218,58 @@ export const updateUserProfile = asycHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(true, "User updated successfully", user, 200));
 });
+
+export const changeCurrentPassword = asycHandler(async (req, res) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+
+  console.log(currentPassword, newPassword, confirmPassword);
+
+  if (!currentPassword) {
+    throw new ApiError(false, "Current password is required", null, 400);
+  }
+
+  if (!newPassword) {
+    throw new ApiError(false, "New password is required", null, 400);
+  }
+
+  if (!confirmPassword) {
+    throw new ApiError(false, "Confirm password is required", null, 400);
+  }
+
+  const user = await User.findOne(req.user._id);
+
+  if (!user) {
+    throw new ApiError(false, "User not found", null, 404);
+  }
+
+  const isPasswordCorrect = await user.isPasswordCorrect(currentPassword);
+
+  if (!isPasswordCorrect) {
+    throw new ApiError(false, "Incorrect current password", {}, 401);
+  }
+
+  if (newPassword === currentPassword) {
+    throw new ApiError(
+      false,
+      "New password cannot be same as current password",
+      {},
+      400
+    );
+  }
+
+  if (newPassword !== confirmPassword) {
+    throw new ApiError(
+      false,
+      "New password and confirm password do not match",
+      {},
+      400
+    );
+  }
+
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(true, "Password changed successfully", {}, 200));
+});

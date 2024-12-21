@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { upload } from "../middlewares/multer.middleware.js";
 import {
+  changeCurrentPassword,
   getCurrentUser,
   getUsers,
   loginUser,
@@ -46,4 +47,7 @@ router.route("/profile").get(verifyJwt, getCurrentUser);
 router
   .route("/update-profile")
   .patch(verifyJwt, upload.single("profile_pic"), updateUserProfile);
+
+router.route("/change-password").post(verifyJwt, changeCurrentPassword);
+
 export default router;
