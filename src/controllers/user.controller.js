@@ -195,14 +195,20 @@ export const updateUserProfile = asycHandler(async (req, res) => {
   const profileImageCloudinaryResponse =
     await uploadOnCloudinary(pofilePicPath);
 
-  const user = await User.findByIdAndUpdate(req.user._id, {
-    $set: {
-      full_name,
-      contact_info,
-      address,
-      profile_pic: profileImageCloudinaryResponse.url,
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        full_name,
+        contact_info,
+        address,
+        profile_pic: profileImageCloudinaryResponse?.url,
+      },
     },
-  });
+    {
+      new: true,
+    }
+  ).select("-password -refreshtoken -__v");
 
   if (!user) {
     throw new ApiError(false, "User not found", null, 404);

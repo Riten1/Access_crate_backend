@@ -43,5 +43,7 @@ router.route("/auth/logout").post(verifyJwt, logoutUser);
 
 router.route("/profile").get(verifyJwt, getCurrentUser);
 
-router.route("/update-profile").post(verifyJwt, upload.single("profile_pic"), updateUserProfile);
+router
+  .route("/update-profile")
+  .patch(verifyJwt, upload.single("profile_pic"), updateUserProfile);
 export default router;
