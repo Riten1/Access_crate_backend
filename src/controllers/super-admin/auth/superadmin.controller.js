@@ -1,11 +1,11 @@
 import { resolvePath } from "react-router-dom";
 import User from "../../../models/user.model.js";
 import ApiError from "../../../utils/ApiError.js";
-import { asycHandler } from "../../../utils/asyncHandler.js";
-import { generateAccessAndRefreshTokens } from "../user/user.controller.js";
+import { asyncHandler } from "../../../utils/asyncHandler.js";
+import { generateAccessAndRefreshTokens } from "../../user/auth/user.controller.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 
-export const superAdminLogin = asycHandler(async (req, res) => {
+export const superAdminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   if (!email) {

@@ -9,11 +9,12 @@ import {
   refreshAccessToken,
   registerUser,
   updateUserProfile,
-} from "../controllers/auth/user/user.controller.js";
+} from "../controllers/user/auth/user.controller.js";
 import passport from "passport";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
-import { superAdminLogin } from "../controllers/auth/super-admin/superadmin.controller.js";
+import { superAdminLogin } from "../controllers/super-admin/auth/superadmin.controller.js";
 import { checkRole } from "../middlewares/checkRole.middleware.js";
+import { inviteOrganizer } from "../controllers/super-admin/invite-organizer.controller.js";
 const router = Router();
 
 router.route("/auth/register").post(
@@ -67,4 +68,8 @@ router.route("/auth/super-admin/login").post(superAdminLogin);
 router
   .route("/auth/super-admin/logout")
   .post(verifyJwt, checkRole("super-admin"), logoutUser);
+
+router
+  .route("/super-admin/invite/admin")
+  .post(verifyJwt, checkRole("super-admin"), inviteOrganizer);
 export default router;

@@ -1,7 +1,7 @@
 import User from "../../../models/user.model.js";
 import uploadOnCloudinary from "../../../services/cloudinary.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
-import { asycHandler } from "../../../utils/asyncHandler.js";
+import { asyncHandler } from "../../../utils/asyncHandler.js";
 import ApiError from "../../../utils/ApiError.js";
 import jwt from "jsonwebtoken";
 
@@ -21,7 +21,7 @@ export const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 //register user
-export const registerUser = asycHandler(async (req, res) => {
+export const registerUser = asyncHandler(async (req, res) => {
   const { full_name, email, password, contact_info, address } = req.body;
 
   if (!full_name || !email || !password || !contact_info || !address) {
@@ -83,7 +83,7 @@ export const registerUser = asycHandler(async (req, res) => {
 });
 
 //login user
-export const loginUser = asycHandler(async (req, res) => {
+export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   if (!email) {
@@ -142,7 +142,7 @@ export const loginUser = asycHandler(async (req, res) => {
     );
 });
 
-export const getUsers = asycHandler(async (req, res) => {
+export const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find().select(
     "-password -refreshtoken -__v -accessToken"
   );
@@ -152,7 +152,7 @@ export const getUsers = asycHandler(async (req, res) => {
     .json(new ApiResponse(true, "Users fetched successfully", users, 200));
 });
 
-export const logoutUser = asycHandler(async (req, res) => {
+export const logoutUser = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user._id,
     {
@@ -175,7 +175,7 @@ export const logoutUser = asycHandler(async (req, res) => {
     .json(new ApiResponse(true, "User logged out successfully", {}, 200));
 });
 
-export const getCurrentUser = asycHandler(async (req, res) => {
+export const getCurrentUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select(
     "-password -refreshtoken -__v"
   );
@@ -188,7 +188,7 @@ export const getCurrentUser = asycHandler(async (req, res) => {
     .json(new ApiResponse(true, "User fetched successfully", user, 200));
 });
 
-export const updateUserProfile = asycHandler(async (req, res) => {
+export const updateUserProfile = asyncHandler(async (req, res) => {
   const { full_name, contact_info, address } = req.body;
 
   const pofilePicPath = req.file?.path;
@@ -220,7 +220,7 @@ export const updateUserProfile = asycHandler(async (req, res) => {
     .json(new ApiResponse(true, "User updated successfully", user, 200));
 });
 
-export const changeCurrentPassword = asycHandler(async (req, res) => {
+export const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword, confirmPassword } = req.body;
 
   console.log(currentPassword, newPassword, confirmPassword);
@@ -275,7 +275,7 @@ export const changeCurrentPassword = asycHandler(async (req, res) => {
     .json(new ApiResponse(true, "Password changed successfully", {}, 200));
 });
 
-export const refreshAccessToken = asycHandler(async (req, res) => {
+export const refreshAccessToken = asyncHandler(async (req, res) => {
   const incommingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
 
