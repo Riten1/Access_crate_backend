@@ -26,9 +26,6 @@ export const adminCreatePassword = asyncHandler(async (req, res) => {
     throw new ApiError(false, "Invalid invitation token", null, 400);
   }
 
-  invitedUser.status = "accepted";
-  await invitedUser.save();
-
   const organizer = await User.create({
     full_name: invitedUser.full_name,
     email: invitedUser.email,
@@ -39,6 +36,9 @@ export const adminCreatePassword = asyncHandler(async (req, res) => {
   });
 
   await organizer.save();
+
+  invitedUser.status = "accepted";
+  await invitedUser.save();
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
     organizer._id
