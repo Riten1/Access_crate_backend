@@ -15,6 +15,7 @@ import { verifyJwt } from "../middlewares/auth.middleware.js";
 import { superAdminLogin } from "../controllers/super-admin/auth/superadmin.controller.js";
 import { checkRole } from "../middlewares/checkRole.middleware.js";
 import { inviteOrganizer } from "../controllers/super-admin/invite-organizer.controller.js";
+import { adminCreatePassword } from "../controllers/admin/auth/create-password.controller.js";
 const router = Router();
 
 router.route("/auth/register").post(
@@ -72,4 +73,6 @@ router
 router
   .route("/super-admin/invite/admin")
   .post(verifyJwt, checkRole("super-admin"), inviteOrganizer);
+
+router.route("/admin/set-password").post(adminCreatePassword);
 export default router;

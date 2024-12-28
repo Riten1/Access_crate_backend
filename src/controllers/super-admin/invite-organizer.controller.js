@@ -7,7 +7,13 @@ import nodemailer from "nodemailer";
 import ApiResponse from "../../utils/ApiResponse.js";
 
 export const inviteOrganizer = asyncHandler(async (req, res) => {
-  const { organizerName, organizerEmail, ownerName, profile_pic } = req.body;
+  const {
+    organizerName,
+    organizerEmail,
+    ownerName,
+    profile_pic,
+    contact_info,
+  } = req.body;
 
   if (!organizerName) {
     throw new ApiError(false, "Organizer Name is required", null, 400);
@@ -39,7 +45,9 @@ export const inviteOrganizer = asyncHandler(async (req, res) => {
   const invitationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   const invitedOrganizer = await Invitation.create({
+    full_name: organizerName,
     email: organizerEmail,
+    contact_info,
     role: "organizer",
     status: "pending",
     invitedBy: req.user._id,
@@ -62,7 +70,7 @@ export const inviteOrganizer = asyncHandler(async (req, res) => {
     to: organizerEmail,
     subject: "You're invited to join Access Crate",
     html: `
-      <div style="font-family: Inter">
+      <div style="font-family: Arial, sans-serif;">
         <h2 style="text-align: center;">You are Invited!</h2>
         
         <p style="margin-bottom: 20px;">Dear ${organizerName},</p>

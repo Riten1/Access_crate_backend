@@ -2,6 +2,14 @@ import mongoose from "mongoose";
 
 const invitationModel = mongoose.Schema(
   {
+    full_name: {
+      type: String,
+      required: true,
+    },
+    contact_info: {
+      type: String,
+      required: true,
+    },
     email: {
       type: String,
       required: true,
