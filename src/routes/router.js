@@ -6,11 +6,14 @@ import {
   getUsers,
   loginUser,
   logoutUser,
+  refreshAccessToken,
   registerUser,
   updateUserProfile,
-} from "../controllers/user.controller.js";
+} from "../controllers/auth/user/user.controller.js";
 import passport from "passport";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
+import { superAdminLogin } from "../controllers/auth/super-admin/superadmin.controller.js";
+import { checkRole } from "../middlewares/checkRole.middleware.js";
 const router = Router();
 
 router.route("/auth/register").post(
@@ -38,16 +41,30 @@ router
     }
   );
 
-router.route("/get-users").get(getUsers);
+router.route("/get-users").get(checkRole("user"), getUsers);
 
-router.route("/auth/logout").post(verifyJwt, logoutUser);
+router.route("/auth/logout").post(verifyJwt, checkRole("user"), logoutUser);
 
-router.route("/profile").get(verifyJwt, getCurrentUser);
+router.route("/profile").get(verifyJwt, checkRole("user"), getCurrentUser);
 
 router
   .route("/update-profile")
-  .patch(verifyJwt, upload.single("profile_pic"), updateUserProfile);
+  .patch(
+    verifyJwt,
+    checkRole("user"),
+    upload.single("profile_pic"),
+    updateUserProfile
+  );
 
-router.route("/change-password").post(verifyJwt, changeCurrentPassword);
+router
+  .route("/change-password")
+  .post(verifyJwt, checkRole("user"), changeCurrentPassword);
 
+router.route("/refresh-token").post(verifyJwt, refreshAccessToken);
+
+router.route("/auth/super-admin/login").post(superAdminLogin);
+
+router
+  .route("/auth/super-admin/logout")
+  .post(verifyJwt, checkRole("super-admin"), logoutUser);
 export default router;

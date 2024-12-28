@@ -1,10 +1,11 @@
-import User from "../models/user.model.js";
-import uploadOnCloudinary from "../services/cloudinary.js";
-import ApiResponse from "../utils/ApiResponse.js";
-import { asycHandler } from "../utils/asyncHandler.js";
-import ApiError from "../utils/ApiError.js";
+import User from "../../../models/user.model.js";
+import uploadOnCloudinary from "../../../services/cloudinary.js";
+import ApiResponse from "../../../utils/ApiResponse.js";
+import { asycHandler } from "../../../utils/asyncHandler.js";
+import ApiError from "../../../utils/ApiError.js";
+import jwt from "jsonwebtoken";
 
-const generateAccessAndRefreshTokens = async (userId) => {
+export const generateAccessAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
     const accessToken = user.generateAccessToken();
@@ -272,4 +273,48 @@ export const changeCurrentPassword = asycHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(true, "Password changed successfully", {}, 200));
+});
+
+export const refreshAccessToken = asycHandler(async (req, res) => {
+  const incommingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken;
+
+  if (!incommingRefreshToken) {
+    throw new ApiError(false, "Unauthorized access", {}, 401);
+  }
+
+  try {
+    const decodedToken = jwt.verify(
+      incommingRefreshToken,
+      process.env.REFRESH_TOKEN_EXPIRY
+    );
+
+    const user = await User.findById(decodedToken?._id);
+
+    if (incommingRefreshToken !== user.refreshtoken) {
+      throw new ApiError(false, "Token expired", 401);
+    }
+
+    const { newRefreshToken, accessToken } =
+      await generateAccessAndRefreshTokens(user._id);
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: true,
+      })
+      .cookie("refreshToken", newRefreshToken, {
+        httpOnly: true,
+        secure: true,
+      })
+      .json(
+        new ApiResponse(true, {
+          accessToken,
+          refreshtoken: newRefreshToken,
+        })
+      );
+  } catch (error) {
+    throw error;
+  }
 });
