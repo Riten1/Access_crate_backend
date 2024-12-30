@@ -16,6 +16,7 @@ import { superAdminLogin } from "../controllers/super-admin/auth/superadmin.cont
 import { checkRole } from "../middlewares/checkRole.middleware.js";
 import { inviteOrganizer } from "../controllers/super-admin/invite-organizer.controller.js";
 import { adminCreatePassword } from "../controllers/admin/auth/create-password.controller.js";
+import { loginAdmin } from "../controllers/admin/auth/login.controller.js";
 const router = Router();
 
 router.route("/auth/register").post(
@@ -75,4 +76,10 @@ router
   .post(verifyJwt, checkRole("super-admin"), inviteOrganizer);
 
 router.route("/admin/set-password").post(adminCreatePassword);
+
+router.route("/admin/login").post(loginAdmin);
+
+router
+  .route("/admin/logout")
+  .post(verifyJwt, checkRole("organizer"), logoutUser);
 export default router;
