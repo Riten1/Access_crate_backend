@@ -44,5 +44,12 @@ export const loginAdmin = asyncHandler(async (req, res) => {
       httpOnly: true,
       secure: true,
     })
-    .json(new ApiResponse(true, "User logged in", loggedInUser, 200));
+    .json(
+      new ApiResponse(
+        true,
+        "User logged in",
+        { admin: loggedInUser, accessToken, refreshToken },
+        200
+      )
+    );
 });
