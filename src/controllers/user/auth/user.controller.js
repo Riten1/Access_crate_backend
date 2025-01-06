@@ -85,25 +85,26 @@ export const registerUser = asyncHandler(async (req, res) => {
 //login user
 export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+  console.log(email, password);
 
   if (!email) {
-    throw new ApiError(false, "Email is required", null, 400);
+    return res.json(new ApiError(false, "Email is required", null, 400));
   }
 
   if (!password) {
-    throw new ApiError(false, "Password is required", null, 400);
+    return res.json(new ApiError(false, "Password is required", null, 400));
   }
 
   const user = await User.findOne({ email });
 
   if (!user) {
-    throw new ApiError(false, "User not registered", null, 404);
+    return res.json(new ApiError(false, "User not registered", null, 404));
   }
 
-  const isPasswordCorrect = user.isPasswordCorrect(password);
+  const isPasswordCheck = await user.isPasswordCorrect(password);
 
-  if (!isPasswordCorrect) {
-    throw new ApiError(false, "Incorrect password", null, 401);
+  if (!isPasswordCheck) {
+    return res.json(new ApiError(false, "Incorrect password", null, 401));
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
@@ -115,11 +116,13 @@ export const loginUser = asyncHandler(async (req, res) => {
   );
 
   if (!loggedInUser) {
-    throw new ApiError(
-      false,
-      "Something went wrong while logging in user",
-      null,
-      500
+    return res.json(
+      new ApiError(
+        false,
+        "Something went wrong while logging in user",
+        null,
+        500
+      )
     );
   }
 
