@@ -9,21 +9,23 @@ export const adminCreatePassword = asyncHandler(async (req, res) => {
   const { password, confirmPassword, invitationToken } = req.body;
 
   if (!password) {
-    throw new ApiError(false, "Password is required", null, 400);
+    return res.json(new ApiError(false, "Password is required", null, 400));
   }
 
   if (!confirmPassword) {
-    throw new ApiError(false, "Confirm password is required", null, 400);
+    return res.json(
+      new ApiError(false, "Confirm password is required", null, 400)
+    );
   }
 
   if (password !== confirmPassword) {
-    throw new ApiError(false, "Passwords do not match", null, 400);
+    return res.json(new ApiError(false, "Passwords do not match", null, 400));
   }
 
   const invitedUser = await Invitation.findOne({ invitationToken });
 
   if (!invitedUser) {
-    throw new ApiError(false, "Invalid invitation token", null, 400);
+    return res.json(new ApiError(false, "Invalid invitation token", null, 400));
   }
 
   const organizer = await User.create({

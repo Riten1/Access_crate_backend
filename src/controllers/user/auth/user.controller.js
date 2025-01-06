@@ -24,8 +24,14 @@ export const generateAccessAndRefreshTokens = async (userId) => {
 export const registerUser = asyncHandler(async (req, res) => {
   const { full_name, email, password, contact_info, address } = req.body;
 
-  if (!full_name || !email || !password || !contact_info || !address) {
-    throw new ApiError(false, "All fields are required", null, 400);
+  if (!full_name || !email || !password || !contact_info) {
+    return res.json(new ApiError(false, "All fields are required", null, 400));
+  }
+
+  if (contact_info.split("").includes(" ")) {
+    return res.json(
+      new ApiError(false, "Contact info should not contain spaces", null, 400)
+    );
   }
 
   const duplicateUser = await User.findOne({
@@ -33,24 +39,25 @@ export const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (duplicateUser) {
-    throw new ApiError(
-      false,
-      "User with provided email, contact info, or address already exists",
-      409
+    return res.json(
+      new ApiError(
+        false,
+        "User with provided email, contact info, or address already exists",
+        409
+      )
     );
   }
 
   const profileImageLocalFile = req.files?.profile_pic[0].path;
-  if (!profileImageLocalFile) {
-    throw new ApiError(false, "Profile picture is required", 400);
-  }
 
   const profileImageCloudinaryResponse = await uploadOnCloudinary(
     profileImageLocalFile
   );
 
   if (!profileImageCloudinaryResponse?.url) {
-    throw new ApiError(false, "Failed to upload profile image", null, 500);
+    return res.json(
+      new ApiError(false, "Failed to upload profile image", null, 500)
+    );
   }
 
   const user = await User.create({
@@ -67,11 +74,13 @@ export const registerUser = asyncHandler(async (req, res) => {
   );
 
   if (!createdUser) {
-    throw new ApiError(
-      false,
-      "Something went wrong while creating user",
+    return res.json(
+      new ApiError(
+        false,
+        "Something went wrong while creating user",
 
-      500
+        500
+      )
     );
   }
 
@@ -184,7 +193,7 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
   );
 
   if (!user) {
-    throw new ApiError(false, "User not found", null, 404);
+    return res.json(new ApiError(false, "User not found", null, 404));
   }
   return res
     .status(200)
@@ -215,7 +224,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
   ).select("-password -refreshtoken -__v");
 
   if (!user) {
-    throw new ApiError(false, "User not found", null, 404);
+    return res.json(new ApiError(false, "User not found", null, 404));
   }
 
   return res
@@ -226,47 +235,53 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
 export const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword, confirmPassword } = req.body;
 
-  console.log(currentPassword, newPassword, confirmPassword);
-
   if (!currentPassword) {
-    throw new ApiError(false, "Current password is required", null, 400);
+    return res.json(
+      new ApiError(false, "Current password is required", null, 400)
+    );
   }
 
   if (!newPassword) {
-    throw new ApiError(false, "New password is required", null, 400);
+    return res.json(new ApiError(false, "New password is required", null, 400));
   }
 
   if (!confirmPassword) {
-    throw new ApiError(false, "Confirm password is required", null, 400);
+    return res.json(
+      new ApiError(false, "Confirm password is required", null, 400)
+    );
   }
 
   const user = await User.findOne(req.user._id);
 
   if (!user) {
-    throw new ApiError(false, "User not found", null, 404);
+    return res.json(new ApiError(false, "User not found", null, 404));
   }
 
   const isPasswordCorrect = await user.isPasswordCorrect(currentPassword);
 
   if (!isPasswordCorrect) {
-    throw new ApiError(false, "Incorrect current password", {}, 401);
+    return res.json(new ApiError(false, "Incorrect current password", {}, 401));
   }
 
   if (newPassword === currentPassword) {
-    throw new ApiError(
-      false,
-      "New password cannot be same as current password",
-      {},
-      400
+    returnres.json(
+      new ApiError(
+        false,
+        "New password cannot be same as current password",
+        {},
+        400
+      )
     );
   }
 
   if (newPassword !== confirmPassword) {
-    throw new ApiError(
-      false,
-      "New password and confirm password do not match",
-      {},
-      400
+    return res.json(
+      new ApiError(
+        false,
+        "New password and confirm password do not match",
+        {},
+        400
+      )
     );
   }
 
@@ -283,7 +298,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     req.cookies.refreshToken || req.body.refreshToken;
 
   if (!incommingRefreshToken) {
-    throw new ApiError(false, "Unauthorized access", {}, 401);
+    returnres.json(new ApiError(false, "Unauthorized access", {}, 401));
   }
 
   try {
@@ -295,7 +310,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     const user = await User.findById(decodedToken?._id);
 
     if (incommingRefreshToken !== user.refreshtoken) {
-      throw new ApiError(false, "Token expired", 401);
+      return res.json(new ApiError(false, "Token expired", 401));
     }
 
     const { newRefreshToken, accessToken } =

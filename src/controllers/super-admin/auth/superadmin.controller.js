@@ -9,11 +9,11 @@ export const superAdminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   if (!email) {
-    throw new ApiError(false, "Email is required", null, 400);
+    return res.json(new ApiError(false, "Email is required", null, 400));
   }
 
   if (!password) {
-    throw new ApiError(false, "Password is required", null, 400);
+    return res.json(new ApiError(false, "Password is required", null, 400));
   }
 
   let user = await User.findOne({ email });
@@ -28,17 +28,15 @@ export const superAdminLogin = asyncHandler(async (req, res) => {
       role: "super-admin",
     });
   }
-  const isPasswordCorrect = user.isPasswordCorrect(password);
+  const isPasswordCorrect = await user.isPasswordCorrect(password);
 
   if (!isPasswordCorrect) {
-    throw new ApiError(false, "Incorrect password", null, 401);
+    return res.json(new ApiError(false, "Incorrect password", null, 401));
   }
 
   if (user.contact_info !== "+9779826127253") {
-    throw new ApiError(false, "No superadmin found", null, 401);
+    return res.json(new ApiError(false, "No superadmin found", null, 401));
   }
-
-  console.log(user);
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
     user._id

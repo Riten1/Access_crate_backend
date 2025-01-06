@@ -16,15 +16,19 @@ export const inviteOrganizer = asyncHandler(async (req, res) => {
   } = req.body;
 
   if (!organizerName) {
-    throw new ApiError(false, "Organizer Name is required", null, 400);
+    return res.json(
+      new ApiError(false, "Organizer Name is required", null, 400)
+    );
   }
 
   if (!organizerEmail) {
-    throw new ApiError(false, "Organizer Email is required", null, 400);
+    return res.json(
+      new ApiError(false, "Organizer Email is required", null, 400)
+    );
   }
 
   if (!ownerName) {
-    throw new ApiError(false, "Owner Name is required", null, 400);
+    return res.json(new ApiError(false, "Owner Name is required", null, 400));
   }
 
   const existingUser = await User.findOne({ email: organizerEmail });
@@ -33,11 +37,8 @@ export const inviteOrganizer = asyncHandler(async (req, res) => {
   });
 
   if (existingUser || existingInvitation) {
-    throw new ApiError(
-      false,
-      "Organizer already invited or registered",
-      null,
-      400
+    return res.json(
+      new ApiError(false, "Organizer already invited or registered", null, 400)
     );
   }
 
