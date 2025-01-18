@@ -37,7 +37,8 @@ const userSchema = new mongoose.Schema(
     contact_info: {
       type: String,
       unique: true,
-      required: true,
+
+      trim: true,
     },
     address: {
       type: String,

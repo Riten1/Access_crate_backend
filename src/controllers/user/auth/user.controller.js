@@ -4,6 +4,9 @@ import ApiResponse from "../../../utils/ApiResponse.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import ApiError from "../../../utils/ApiError.js";
 import jwt from "jsonwebtoken";
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { OAuth2Client } from "google-auth-library";
 
 export const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -20,18 +23,21 @@ export const generateAccessAndRefreshTokens = async (userId) => {
   }
 };
 
-//register user
 export const registerUser = asyncHandler(async (req, res) => {
   const { full_name, email, password, contact_info, address } = req.body;
 
-  if (!full_name || !email || !password || !contact_info) {
-    return res.json(new ApiError(false, "All fields are required", null, 400));
+  if (!full_name || !email || !password) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "All fields are required", null, 400));
   }
 
-  if (contact_info.split("").includes(" ")) {
-    return res.json(
-      new ApiError(false, "Contact info should not contain spaces", null, 400)
-    );
+  if (contact_info && contact_info.includes(" ")) {
+    return res
+      .status(400)
+      .json(
+        new ApiError(false, "Contact info should not contain spaces", null, 400)
+      );
   }
 
   const duplicateUser = await User.findOne({
@@ -39,59 +45,76 @@ export const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (duplicateUser) {
-    return res.json(
-      new ApiError(
-        false,
-        "User with provided email, contact info, or address already exists",
-        409
-      )
-    );
+    return res
+      .status(400)
+      .json(
+        new ApiError(
+          false,
+          "User with the provided email or contact info already exists",
+          400
+        )
+      );
   }
 
-  const profileImageLocalFile = req.files?.profile_pic[0].path;
+  let profile_pic_url = null;
+  if (req.files?.profile_pic && req.files.profile_pic.length > 0) {
+    const profileImageLocalFile = req.files.profile_pic[0].path;
 
-  const profileImageCloudinaryResponse = await uploadOnCloudinary(
-    profileImageLocalFile
-  );
-
-  if (!profileImageCloudinaryResponse?.url) {
-    return res.json(
-      new ApiError(false, "Failed to upload profile image", null, 500)
+    const profileImageCloudinaryResponse = await uploadOnCloudinary(
+      profileImageLocalFile
     );
+
+    if (!profileImageCloudinaryResponse?.url) {
+      return res
+        .status(500)
+        .json(new ApiError(false, "Failed to upload profile image", null, 500));
+    }
+
+    profile_pic_url = profileImageCloudinaryResponse.url;
   }
 
   const user = await User.create({
     full_name,
     email,
-    password,
+    password: password,
     contact_info,
     address,
-    profile_pic: profileImageCloudinaryResponse.url,
+    profile_pic: profile_pic_url,
   });
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+    user._id
+  );
 
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
 
   if (!createdUser) {
-    return res.json(
-      new ApiError(
-        false,
-        "Something went wrong while creating user",
+    return res
+      .status(500)
+      .json(
+        new ApiError(false, "Something went wrong while creating user", 500)
+      );
+  }
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
 
-        500
+  return res
+    .status(200)
+    .cookie("refreshToken", refreshToken, options)
+    .cookie("accessToken", accessToken, options)
+    .json(
+      new ApiResponse(
+        true,
+        "User registered successfully",
+        { user: createdUser, accessToken, refreshToken },
+        200
       )
     );
-  }
-
-  if (createdUser) {
-    return res
-      .status(200)
-      .json(new ApiResponse(true, "User created", createdUser, 200));
-  }
 });
 
-//login user
 export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   console.log(email, password);
@@ -168,7 +191,7 @@ export const logoutUser = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: { refreshtoken: undefined },
+      $set: { refreshtoken: null },
     },
     {
       new: true,

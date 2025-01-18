@@ -30,19 +30,6 @@ router.route("/auth/register").post(
 );
 
 router.route("/auth/login").post(loginUser);
-router
-  .route("/auth/google")
-  .get(passport.authenticate("google", { scope: ["profile", "email"] }));
-
-router
-  .route("/auth/google/callback")
-  .get(
-    passport.authenticate("google", { failureRedirect: "/" }),
-    (req, res) => {
-      // After successful login, redirect to homepage or another page
-      res.redirect("http://localhost:5173/"); // Example: homepage on your frontend
-    }
-  );
 
 router.route("/get-users").get(checkRole("user"), getUsers);
 
@@ -82,4 +69,6 @@ router.route("/admin/login").post(loginAdmin);
 router
   .route("/admin/logout")
   .post(verifyJwt, checkRole("organizer"), logoutUser);
+
+
 export default router;
