@@ -31,6 +31,14 @@ export const inviteOrganizer = asyncHandler(async (req, res) => {
     return res.json(new ApiError(false, "Owner Name is required", null, 400));
   }
 
+  if (contact_info && contact_info.includes(" ")) {
+    return res
+      .status(400)
+      .json(
+        new ApiError(false, "Contact info should not contain spaces", null, 400)
+      );
+  }
+
   const existingUser = await User.findOne({ email: organizerEmail });
   const existingInvitation = await Invitation.findOne({
     email: organizerEmail,

@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema(
     },
     profile_pic: {
       type: String,
+      default: null,
     },
     email: {
       type: String,
@@ -37,12 +38,13 @@ const userSchema = new mongoose.Schema(
     contact_info: {
       type: String,
       unique: true,
-
+      default: null,
       trim: true,
     },
     address: {
       type: String,
       unique: false,
+      default: null,
     },
   },
   {

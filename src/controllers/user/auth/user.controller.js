@@ -4,9 +4,9 @@ import ApiResponse from "../../../utils/ApiResponse.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import ApiError from "../../../utils/ApiError.js";
 import jwt from "jsonwebtoken";
-import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { OAuth2Client } from "google-auth-library";
+// import passport from "passport";
+// import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+// import { OAuth2Client } from "google-auth-library";
 
 export const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -24,7 +24,7 @@ export const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 export const registerUser = asyncHandler(async (req, res) => {
-  const { full_name, email, password, contact_info, address } = req.body;
+  const { full_name, email, password } = req.body;
 
   if (!full_name || !email || !password) {
     return res
@@ -32,27 +32,15 @@ export const registerUser = asyncHandler(async (req, res) => {
       .json(new ApiError(false, "All fields are required", null, 400));
   }
 
-  if (contact_info && contact_info.includes(" ")) {
-    return res
-      .status(400)
-      .json(
-        new ApiError(false, "Contact info should not contain spaces", null, 400)
-      );
-  }
-
   const duplicateUser = await User.findOne({
-    $or: [{ email }, { contact_info }],
+    $or: [{ email }],
   });
 
   if (duplicateUser) {
     return res
       .status(400)
       .json(
-        new ApiError(
-          false,
-          "User with the provided email or contact info already exists",
-          400
-        )
+        new ApiError(false, "User with the provided email  already exists", 400)
       );
   }
 
@@ -77,9 +65,6 @@ export const registerUser = asyncHandler(async (req, res) => {
     full_name,
     email,
     password: password,
-    contact_info,
-    address,
-    profile_pic: profile_pic_url,
   });
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
     user._id
@@ -120,23 +105,31 @@ export const loginUser = asyncHandler(async (req, res) => {
   console.log(email, password);
 
   if (!email) {
-    return res.json(new ApiError(false, "Email is required", null, 400));
+    throw res
+      .status(400)
+      .json(new ApiError(false, "Email is required", null, 400));
   }
 
   if (!password) {
-    return res.json(new ApiError(false, "Password is required", null, 400));
+    throw res
+      .status(400)
+      .json(new ApiError(false, "Password is required", null, 400));
   }
 
   const user = await User.findOne({ email });
 
   if (!user) {
-    return res.json(new ApiError(false, "User not registered", null, 404));
+    throw res
+      .status(404)
+      .json(new ApiError(false, "User not registered", null, 404));
   }
 
   const isPasswordCheck = await user.isPasswordCorrect(password);
 
   if (!isPasswordCheck) {
-    return res.json(new ApiError(false, "Incorrect password", null, 401));
+    return res
+      .status(401)
+      .json(new ApiError(false, "Incorrect password", null, 401));
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
@@ -148,14 +141,16 @@ export const loginUser = asyncHandler(async (req, res) => {
   );
 
   if (!loggedInUser) {
-    return res.json(
-      new ApiError(
-        false,
-        "Something went wrong while logging in user",
-        null,
-        500
-      )
-    );
+    return res
+      .status(500)
+      .json(
+        new ApiError(
+          false,
+          "Something went wrong while logging in user",
+          null,
+          500
+        )
+      );
   }
 
   const options = {
@@ -216,7 +211,9 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
   );
 
   if (!user) {
-    return res.json(new ApiError(false, "User not found", null, 404));
+    return res
+      .status(404)
+      .json(new ApiError(false, "User not found", null, 404));
   }
   return res
     .status(200)
@@ -247,7 +244,9 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
   ).select("-password -refreshtoken -__v");
 
   if (!user) {
-    return res.json(new ApiError(false, "User not found", null, 404));
+    return res
+      .status(404)
+      .json(new ApiError(false, "User not found", null, 404));
   }
 
   return res
@@ -259,53 +258,63 @@ export const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword, confirmPassword } = req.body;
 
   if (!currentPassword) {
-    return res.json(
-      new ApiError(false, "Current password is required", null, 400)
-    );
+    return res
+      .status(400)
+      .json(new ApiError(false, "Current password is required", null, 400));
   }
 
   if (!newPassword) {
-    return res.json(new ApiError(false, "New password is required", null, 400));
+    return res
+      .status(400)
+      .json(new ApiError(false, "New password is required", null, 400));
   }
 
   if (!confirmPassword) {
-    return res.json(
-      new ApiError(false, "Confirm password is required", null, 400)
-    );
+    return res
+      .status(400)
+      .json(new ApiError(false, "Confirm password is required", null, 400));
   }
 
   const user = await User.findOne(req.user._id);
 
   if (!user) {
-    return res.json(new ApiError(false, "User not found", null, 404));
+    return res
+      .status(404)
+      .json(new ApiError(false, "User not found", null, 404));
   }
 
   const isPasswordCorrect = await user.isPasswordCorrect(currentPassword);
 
   if (!isPasswordCorrect) {
-    return res.json(new ApiError(false, "Incorrect current password", {}, 401));
+    return res
+      .status(401)
+      .json(new ApiError(false, "Incorrect current password", {}, 401));
   }
 
   if (newPassword === currentPassword) {
-    returnres.json(
-      new ApiError(
-        false,
-        "New password cannot be same as current password",
-        {},
-        400
-      )
-    );
+    return res
+      .status(400)
+      .json(
+        new ApiError(
+          false,
+          "New password cannot be same as current password",
+          {},
+          400
+        )
+      );
   }
 
   if (newPassword !== confirmPassword) {
-    return res.json(
-      new ApiError(
-        false,
-        "New password and confirm password do not match",
-        {},
-        400
-      )
-    );
+    return res
+      .status(400)
+      .json(
+        new ApiError(
+          false,
+          "New password and confirm password do not match",
+          {},
+          400
+        )
+      );
   }
 
   user.password = newPassword;
