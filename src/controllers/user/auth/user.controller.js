@@ -251,7 +251,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(true, "User updated successfully", user, 200));
+    .json(new ApiResponse(true, "Profile updated successfully", user, 200));
 });
 
 export const changeCurrentPassword = asyncHandler(async (req, res) => {
