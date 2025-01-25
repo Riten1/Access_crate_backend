@@ -4,6 +4,10 @@ import ApiResponse from "../../../utils/ApiResponse.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import ApiError from "../../../utils/ApiError.js";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
+import bcrypt from "bcrypt";
+
 // import passport from "passport";
 // import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 // import { OAuth2Client } from "google-auth-library";
@@ -102,7 +106,6 @@ export const registerUser = asyncHandler(async (req, res) => {
 
 export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  console.log(email, password);
 
   if (!email) {
     throw res
@@ -123,12 +126,14 @@ export const loginUser = asyncHandler(async (req, res) => {
       .status(404)
       .json(new ApiError(false, "User not registered", null, 404));
   }
+  console.log("entered password", password);
+  console.log("user password", user.password);
 
   const isPasswordCheck = await user.isPasswordCorrect(password);
-
+  console.log(isPasswordCheck);
   if (!isPasswordCheck) {
-    return res
-      .status(401)
+    throw res
+      .status(400)
       .json(new ApiError(false, "Incorrect password", null, 401));
   }
 
@@ -367,4 +372,135 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   } catch (error) {
     throw error;
   }
+});
+
+export const sentOtp = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Email is required", null, 400));
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res
+      .status(404)
+      .json(new ApiError(false, "User not found", null, 404));
+  }
+
+  const otp = crypto.randomBytes(6).toString("hex");
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.MY_EMAIL,
+      pass: process.env.MY_PASSWORD,
+    },
+  });
+
+  const mailOptions = {
+    from: `"Access Crate" <${process.env.MY_EMAIL}>`,
+    to: email,
+    subject: "Forgot password OTP",
+    html: `
+      <div style="font-family: Arial, sans-serif;">
+        <h2 style="text-align: center;">Forgot Password OTP</h2>
+        <p style="margin-bottom: 20px;">Your OTP is: <strong>${otp}</strong></p>
+        <p>Note: This OTP is valid for 10 minutes</p>
+        <p style="margin-top: 20px;">Best regards,<br/>Access Crate Team</p>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+  user.otp = otp;
+  user.otpExpires = Date.now() + 10 * 60 * 1000; // OTP expires in 10 minutes
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        true,
+        "OTP sent successfully, check your email",
+        null,
+        200
+      )
+    );
+});
+
+export const verifyOtp = asyncHandler(async (req, res) => {
+  const { email, otp, newPassword, confirmPassword } = req.body;
+
+  if (!otp) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "OTP is required", null, 400));
+  }
+
+  if (!newPassword) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "New password is required", null, 400));
+  }
+
+  if (!confirmPassword) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Confirm password is required", null, 400));
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res
+      .status(400)
+      .json(
+        new ApiError(
+          false,
+          "New password and confirm password do not match",
+          null,
+          400
+        )
+      );
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res
+      .status(404)
+      .json(new ApiError(false, "User not found", null, 404));
+  }
+  console.log("entered otp: ", otp);
+  console.log("User otp: ", user.otp);
+  if (user.otp !== otp) {
+    return res.status(400).json(new ApiError(false, "Invalid OTP", null, 400));
+  }
+
+  if (user.otpExpires < Date.now()) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "OTP has expired", null, 400));
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  user.password = hashedPassword;
+  user.otp = undefined;
+  user.otpExpires = undefined;
+
+  await user.save();
+  console.log("Hashed password after reset:", user.password);
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        true,
+        "Password reset successful. You can now log in with your new password.",
+        null,
+        200
+      )
+    );
 });

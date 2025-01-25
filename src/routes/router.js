@@ -8,7 +8,9 @@ import {
   logoutUser,
   refreshAccessToken,
   registerUser,
+  sentOtp,
   updateUserProfile,
+  verifyOtp,
 } from "../controllers/user/auth/user.controller.js";
 import passport from "passport";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
@@ -70,5 +72,7 @@ router
   .route("/admin/logout")
   .post(verifyJwt, checkRole("organizer"), logoutUser);
 
+router.route("/forgot-password").post(sentOtp);
+router.route("/forgot-password/create-password").post(verifyOtp);
 
 export default router;
