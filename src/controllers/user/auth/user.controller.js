@@ -126,11 +126,8 @@ export const loginUser = asyncHandler(async (req, res) => {
       .status(404)
       .json(new ApiError(false, "User not registered", null, 404));
   }
-  console.log("entered password", password);
-  console.log("user password", user.password);
 
   const isPasswordCheck = await user.isPasswordCorrect(password);
-  console.log(isPasswordCheck);
   if (!isPasswordCheck) {
     throw res
       .status(400)
@@ -391,7 +388,7 @@ export const sentOtp = asyncHandler(async (req, res) => {
       .json(new ApiError(false, "User not found", null, 404));
   }
 
-  const otp = crypto.randomBytes(6).toString("hex");
+  const otp = crypto.randomBytes(3).toString("hex");
 
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -407,9 +404,8 @@ export const sentOtp = asyncHandler(async (req, res) => {
     subject: "Forgot password OTP",
     html: `
       <div style="font-family: Arial, sans-serif;">
-        <h2 style="text-align: center;">Forgot Password OTP</h2>
         <p style="margin-bottom: 20px;">Your OTP is: <strong>${otp}</strong></p>
-        <p>Note: This OTP is valid for 10 minutes</p>
+        <p>Note: This OTP is valid for 1 minute</p>
         <p style="margin-top: 20px;">Best regards,<br/>Access Crate Team</p>
       </div>
     `,
@@ -417,7 +413,7 @@ export const sentOtp = asyncHandler(async (req, res) => {
 
   await transporter.sendMail(mailOptions);
   user.otp = otp;
-  user.otpExpires = Date.now() + 10 * 60 * 1000; // OTP expires in 10 minutes
+  user.otpExpires = Date.now() + 60 * 1000;
   await user.save({ validateBeforeSave: false });
 
   return res
@@ -473,8 +469,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       .status(404)
       .json(new ApiError(false, "User not found", null, 404));
   }
-  console.log("entered otp: ", otp);
-  console.log("User otp: ", user.otp);
+
   if (user.otp !== otp) {
     return res.status(400).json(new ApiError(false, "Invalid OTP", null, 400));
   }
@@ -485,9 +480,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       .json(new ApiError(false, "OTP has expired", null, 400));
   }
 
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-  user.password = hashedPassword;
+  user.password = newPassword;
   user.otp = undefined;
   user.otpExpires = undefined;
 
