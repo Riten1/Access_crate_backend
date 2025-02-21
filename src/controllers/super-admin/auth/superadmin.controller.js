@@ -55,5 +55,12 @@ export const superAdminLogin = asyncHandler(async (req, res) => {
     .status(200)
     .cookie("accessToken", accessToken, options)
     .cookie("refreshToken", refreshToken, options)
-    .json(new ApiResponse(true, "Login successful", superAdmin, 200));
+    .json(
+      new ApiResponse(
+        true,
+        "Login successful",
+        { superAdmin, accessToken, refreshToken },
+        200
+      )
+    );
 });
