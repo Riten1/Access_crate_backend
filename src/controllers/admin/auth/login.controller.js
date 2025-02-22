@@ -7,23 +7,31 @@ export const loginAdmin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   if (!email) {
-    return res.json(new ApiError(false, "Email is required", {}, 400));
+    return res
+      .status(400)
+      .json(new ApiError(false, "Email is required", {}, 400));
   }
 
   if (!password) {
-    return res.json(new ApiError(false, "Password is required", {}, 400));
+    return res
+      .status(400)
+      .json(new ApiError(false, "Password is required", {}, 400));
   }
 
   const user = await User.findOne({ email });
 
   if (!user) {
-    return res.json(new ApiError(false, "User not registered", null, 401));
+    return res
+      .status(401)
+      .json(new ApiError(false, "User not registered", null, 401));
   }
 
   const isPasswordCorrect = await user.isPasswordCorrect(password);
 
   if (!isPasswordCorrect) {
-    return res.json(new ApiError(false, "Incorrect password", {}, 400));
+    return res
+      .status(400)
+      .json(new ApiError(false, "Incorrect password", {}, 400));
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(

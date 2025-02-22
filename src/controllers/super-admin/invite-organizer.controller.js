@@ -16,15 +16,15 @@ export const inviteOrganizer = asyncHandler(async (req, res) => {
   } = req.body;
 
   if (!organizerName) {
-    return res.json(
-      new ApiError(false, "Organizer Name is required", null, 400)
-    );
+    return res
+      .status(400)
+      .json(new ApiError(false, "Organizer Name is required", null, 400));
   }
 
   if (!organizerEmail) {
-    return res.json(
-      new ApiError(false, "Organizer Email is required", null, 400)
-    );
+    return res
+      .status(400)
+      .json(new ApiError(false, "Organizer Email is required", null, 400));
   }
 
   if (!ownerName) {
@@ -45,9 +45,16 @@ export const inviteOrganizer = asyncHandler(async (req, res) => {
   });
 
   if (existingUser || existingInvitation) {
-    return res.json(
-      new ApiError(false, "Organizer already invited or registered", null, 400)
-    );
+    return res
+      .status(400)
+      .json(
+        new ApiError(
+          false,
+          "Organizer already invited or registered",
+          null,
+          400
+        )
+      );
   }
 
   const invitationToken = crypto.randomBytes(32).toString("hex");
@@ -64,7 +71,7 @@ export const inviteOrganizer = asyncHandler(async (req, res) => {
     invitationExpiry,
   });
 
-  const frontendNavigationUrl = `${process.env.INVITATION_FRONTEND_NAVIGATION_URL}/invite?token=${invitationToken}`;
+  const frontendNavigationUrl = `${process.env.INVITATION_FRONTEND_NAVIGATION_URL}admin/invitation?token=${invitationToken}`;
 
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -99,4 +106,27 @@ export const inviteOrganizer = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(true, "Invitation sent successfully", {}, 200));
+});
+
+export const getInvitedOrganizers = asyncHandler(async (req, res) => {
+  const invitedOrganizers = await Invitation.find({ invitedBy: req.user._id }).select(
+    "-invitationToken -invitationExpiry -__v" 
+  );
+
+  if (!invitedOrganizers) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Invited organizers not found", null, 400));
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        true,
+        "Invited organizers fetched successfully",
+        invitedOrganizers,
+        200
+      )
+    );
 });

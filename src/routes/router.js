@@ -16,7 +16,10 @@ import passport from "passport";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
 import { superAdminLogin } from "../controllers/super-admin/auth/superadmin.controller.js";
 import { checkRole } from "../middlewares/checkRole.middleware.js";
-import { inviteOrganizer } from "../controllers/super-admin/invite-organizer.controller.js";
+import {
+  getInvitedOrganizers,
+  inviteOrganizer,
+} from "../controllers/super-admin/invite-organizer.controller.js";
 import { adminCreatePassword } from "../controllers/admin/auth/create-password.controller.js";
 import { loginAdmin } from "../controllers/admin/auth/login.controller.js";
 const router = Router();
@@ -74,5 +77,8 @@ router
 
 router.route("/forgot-password").post(sentOtp);
 router.route("/forgot-password/create-password").post(verifyOtp);
+router
+  .route("/organizers")
+  .get(verifyJwt, checkRole("super-admin"), getInvitedOrganizers);
 
 export default router;
