@@ -63,6 +63,7 @@ export const inviteOrganizer = asyncHandler(async (req, res) => {
   const invitedOrganizer = await Invitation.create({
     full_name: organizerName,
     email: organizerEmail,
+    ownerName,
     contact_info,
     role: "organizer",
     status: "pending",
@@ -109,9 +110,9 @@ export const inviteOrganizer = asyncHandler(async (req, res) => {
 });
 
 export const getInvitedOrganizers = asyncHandler(async (req, res) => {
-  const invitedOrganizers = await Invitation.find({ invitedBy: req.user._id }).select(
-    "-invitationToken -invitationExpiry -__v" 
-  );
+  const invitedOrganizers = await Invitation.find({
+    invitedBy: req.user._id,
+  }).select("-invitationToken -invitationExpiry -__v");
 
   if (!invitedOrganizers) {
     return res
