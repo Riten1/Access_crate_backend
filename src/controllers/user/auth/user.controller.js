@@ -119,6 +119,10 @@ export const loginUser = asyncHandler(async (req, res) => {
       .json(new ApiError(false, "Password is required", null, 400));
   }
 
+  if (email === "superadmin@gmail.com") {
+    throw res.status(401).json(new ApiError(false, "No user found", null, 400));
+  }
+
   const user = await User.findOne({ email });
 
   if (!user) {

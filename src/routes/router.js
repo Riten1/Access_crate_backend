@@ -13,7 +13,7 @@ import {
   verifyOtp,
 } from "../controllers/user/auth/user.controller.js";
 import passport from "passport";
-import { verifyJwt } from "../middlewares/auth.middleware.js";
+import { verifyJwt, verifyJwtAdmin } from "../middlewares/auth.middleware.js";
 import { superAdminLogin } from "../controllers/super-admin/auth/superadmin.controller.js";
 import { checkRole } from "../middlewares/checkRole.middleware.js";
 import {
@@ -73,7 +73,7 @@ router.route("/admin/login").post(loginAdmin);
 
 router
   .route("/admin/logout")
-  .post(verifyJwt, checkRole("organizer"), logoutUser);
+  .post(verifyJwtAdmin, checkRole("organizer"), logoutUser);
 
 router.route("/forgot-password").post(sentOtp);
 router.route("/forgot-password/create-password").post(verifyOtp);

@@ -1,9 +1,23 @@
+import Organizer from "../../../models/admin.model.js";
 import Invitation from "../../../models/invitation.model.js";
-import User from "../../../models/user.model.js";
 import ApiError from "../../../utils/ApiError.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
-import { generateAccessAndRefreshTokens } from "../../user/auth/user.controller.js";
+
+export const generateAccessAndRefreshTokensAdmin = async (userId) => {
+  try {
+    const organizer = await Organizer.findById(userId);
+    const accessToken = organizer.generateAccessToken();
+    const refreshToken = organizer.generateRefreshToken();
+
+    organizer.refreshtoken = refreshToken;
+    await organizer.save({ validateBeforeSave: false });
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(false, "Failed to generate tokens", null, 500);
+  }
+};
 
 export const adminCreatePassword = asyncHandler(async (req, res) => {
   const { password, confirmPassword, invitationToken } = req.body;
@@ -25,27 +39,39 @@ export const adminCreatePassword = asyncHandler(async (req, res) => {
   const invitedUser = await Invitation.findOne({ invitationToken });
 
   if (!invitedUser) {
-    return res.json(new ApiError(false, "Invalid invitation token", null, 400));
+    return res
+      .status(400)
+      .json(
+        new ApiError(false, "Invalid invitation token or expired", null, 400)
+      );
   }
 
-  const organizer = await User.create({
-    full_name: invitedUser.full_name,
+  let existingOrganizer = await Organizer.findOne({ email: invitedUser.email });
+
+  if (existingOrganizer) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Organizer already exists", null, 400));
+  }
+
+  existingOrganizer = await Organizer.create({
+    organizer_name: invitedUser.full_name,
     email: invitedUser.email,
     password,
     contact_info: invitedUser.contact_info,
     address: invitedUser.address,
     role: "organizer",
+    owner_name: invitedUser.ownerName,
   });
-
-  await organizer.save();
+  await existingOrganizer.save();
 
   invitedUser.status = "accepted";
   await invitedUser.save();
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
-    organizer._id
-  );
-  const createdOrganizer = await User.findById(organizer._id).select(
+  const { accessToken, refreshToken } =
+    await generateAccessAndRefreshTokensAdmin(existingOrganizer._id);
+
+  const updatedUser = await Organizer.findById(existingOrganizer._id).select(
     "-password -refreshtoken -__v"
   );
 
@@ -62,9 +88,9 @@ export const adminCreatePassword = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         true,
-        "Organizer account created successfully",
+        "User is now both 'user' and 'organizer'",
         {
-          admin: createdOrganizer,
+          admin: updatedUser,
           accessToken,
           refreshToken,
         },

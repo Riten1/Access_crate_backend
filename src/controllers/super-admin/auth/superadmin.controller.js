@@ -35,7 +35,9 @@ export const superAdminLogin = asyncHandler(async (req, res) => {
   }
 
   if (user.contact_info !== "+9779826127253") {
-    return res.json(new ApiError(false, "No superadmin found", null, 401));
+    return res
+      .status(401)
+      .json(new ApiError(false, "No superadmin found", null, 401));
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(

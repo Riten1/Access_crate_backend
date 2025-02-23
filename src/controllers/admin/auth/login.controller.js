@@ -1,8 +1,10 @@
+import Organizer from "../../../models/admin.model.js";
 import User from "../../../models/user.model.js";
 import ApiError from "../../../utils/ApiError.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { generateAccessAndRefreshTokens } from "../../user/auth/user.controller.js";
+import { generateAccessAndRefreshTokensAdmin } from "./create-password.controller.js";
 export const loginAdmin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -18,15 +20,19 @@ export const loginAdmin = asyncHandler(async (req, res) => {
       .json(new ApiError(false, "Password is required", {}, 400));
   }
 
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return res
-      .status(401)
-      .json(new ApiError(false, "User not registered", null, 401));
+  if (email === "superadmin@gmail.com") {
+    return res.status(400).json(new ApiError(false, "No Admin found", {}, 400));
   }
 
-  const isPasswordCorrect = await user.isPasswordCorrect(password);
+  const organizer = await Organizer.findOne({ email });
+
+  if (!organizer) {
+    return res
+      .status(401)
+      .json(new ApiError(false, "Organizer not registered", null, 401));
+  }
+
+  const isPasswordCorrect = await organizer.isPasswordCorrect(password);
 
   if (!isPasswordCorrect) {
     return res
@@ -34,11 +40,10 @@ export const loginAdmin = asyncHandler(async (req, res) => {
       .json(new ApiError(false, "Incorrect password", {}, 400));
   }
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
-    user._id
-  );
+  const { accessToken, refreshToken } =
+    await generateAccessAndRefreshTokensAdmin(organizer._id);
 
-  const loggedInUser = await User.findById(user._id).select(
+  const loggedInUser = await Organizer.findById(organizer._id).select(
     "-password -refreshtoken -__v"
   );
 
