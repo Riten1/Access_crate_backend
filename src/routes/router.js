@@ -22,7 +22,11 @@ import {
   reInviteOrganizer,
 } from "../controllers/super-admin/invite-organizer.controller.js";
 import { adminCreatePassword } from "../controllers/admin/auth/create-password.controller.js";
-import { loginAdmin } from "../controllers/admin/auth/login.controller.js";
+import {
+  loginAdmin,
+  sentOtpAdmin,
+  verifyOtpAdmin,
+} from "../controllers/admin/auth/login.controller.js";
 const router = Router();
 
 router.route("/auth/register").post(
@@ -85,5 +89,8 @@ router
 router
   .route("/super-admin/re-invite/:id")
   .post(verifyJwt, checkRole("super-admin"), reInviteOrganizer);
+
+router.route("/admin/forgot-password").post(sentOtpAdmin);
+router.route("/admin/forgot-password/create-password").post(verifyOtpAdmin);
 
 export default router;

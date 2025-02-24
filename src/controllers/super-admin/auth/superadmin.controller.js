@@ -5,6 +5,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { generateAccessAndRefreshTokens } from "../../user/auth/user.controller.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 
+
 export const superAdminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -31,7 +32,15 @@ export const superAdminLogin = asyncHandler(async (req, res) => {
   const isPasswordCorrect = await user.isPasswordCorrect(password);
 
   if (!isPasswordCorrect) {
-    return res.json(new ApiError(false, "Incorrect password", null, 401));
+    return res
+      .status(400)
+      .json(new ApiError(false, "Incorrect password", null, 401));
+  }
+
+  if (email !== "superadmin@gmail.com") {
+    return res
+      .status(400)
+      .json(new ApiError(false, "No superadmin found", null, 401));
   }
 
   if (user.contact_info !== "+9779826127253") {
@@ -66,3 +75,5 @@ export const superAdminLogin = asyncHandler(async (req, res) => {
       )
     );
 });
+
+
