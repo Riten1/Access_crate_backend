@@ -19,6 +19,7 @@ import { checkRole } from "../middlewares/checkRole.middleware.js";
 import {
   getInvitedOrganizers,
   inviteOrganizer,
+  reInviteOrganizer,
 } from "../controllers/super-admin/invite-organizer.controller.js";
 import { adminCreatePassword } from "../controllers/admin/auth/create-password.controller.js";
 import { loginAdmin } from "../controllers/admin/auth/login.controller.js";
@@ -80,5 +81,9 @@ router.route("/forgot-password/create-password").post(verifyOtp);
 router
   .route("/organizers")
   .get(verifyJwt, checkRole("super-admin"), getInvitedOrganizers);
+
+router
+  .route("/super-admin/re-invite/:id")
+  .post(verifyJwt, checkRole("super-admin"), reInviteOrganizer);
 
 export default router;
