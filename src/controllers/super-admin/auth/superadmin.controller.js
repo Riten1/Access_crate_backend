@@ -4,32 +4,54 @@ import ApiError from "../../../utils/ApiError.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { generateAccessAndRefreshTokens } from "../../user/auth/user.controller.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
+import SuperAdmin from "../../../models/super-admin.model.js";
 
+export const generateAccessAndRefreshTokensSuperAdmin = async (userId) => {
+  try {
+    const superAdmin = await SuperAdmin.findById(userId);
+    const accessToken = superAdmin.generateAccessToken();
+    const refreshToken = superAdmin.generateRefreshToken();
+
+    superAdmin.refreshtoken = refreshToken;
+    await superAdmin.save({ validateBeforeSave: false });
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(false, "Failed to generate tokens", null, 500);
+  }
+};
 
 export const superAdminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   if (!email) {
-    return res.json(new ApiError(false, "Email is required", null, 400));
+    return res
+      .status(400)
+      .json(new ApiError(false, "Email is required", null, 400));
   }
 
   if (!password) {
-    return res.json(new ApiError(false, "Password is required", null, 400));
+    return res
+      .status(400)
+      .json(new ApiError(false, "Password is required", null, 400));
   }
 
-  let user = await User.findOne({ email });
+  if (email !== "griten186@gmail.com") {
+    return res
+      .status(404)
+      .json(new ApiError(false, "No Super Admin found", null, 400));
+  }
 
-  if (!user) {
-    user = await User.create({
-      full_name: "Super Admin",
-      email,
+  let superAdmin = await SuperAdmin.findOne({ email });
+
+  if (!superAdmin) {
+    superAdmin = await SuperAdmin.create({
+      email: "griten186@gmail.com",
       password,
-      contact_info: "+9779826127253",
-      address: "Pokhara Nepal",
       role: "super-admin",
     });
   }
-  const isPasswordCorrect = await user.isPasswordCorrect(password);
+  const isPasswordCorrect = await superAdmin.isPasswordCorrect(password);
 
   if (!isPasswordCorrect) {
     return res
@@ -37,23 +59,10 @@ export const superAdminLogin = asyncHandler(async (req, res) => {
       .json(new ApiError(false, "Incorrect password", null, 401));
   }
 
-  if (email !== "superadmin@gmail.com") {
-    return res
-      .status(400)
-      .json(new ApiError(false, "No superadmin found", null, 401));
-  }
+  const { accessToken, refreshToken } =
+    await generateAccessAndRefreshTokensSuperAdmin(superAdmin._id);
 
-  if (user.contact_info !== "+9779826127253") {
-    return res
-      .status(401)
-      .json(new ApiError(false, "No superadmin found", null, 401));
-  }
-
-  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
-    user._id
-  );
-
-  const superAdmin = await User.findById(user._id).select(
+  const superAdminCreated = await SuperAdmin.findById(superAdmin._id).select(
     "-password -refreshtoken -__v"
   );
   const options = {
@@ -70,10 +79,8 @@ export const superAdminLogin = asyncHandler(async (req, res) => {
       new ApiResponse(
         true,
         "Login successful",
-        { superAdmin, accessToken, refreshToken },
+        { superAdminCreated, accessToken, refreshToken },
         200
       )
     );
 });
-
-
