@@ -35,6 +35,10 @@ import {
   createEventCategory,
   getCategories,
 } from "../controllers/super-admin/create-category.controller.js";
+import {
+  createEvent,
+  getEvents,
+} from "../controllers/admin/events/event.controller.js";
 const router = Router();
 
 router.route("/auth/register").post(
@@ -109,4 +113,16 @@ router
   .route("/super-admin/event/categories")
   .get(verifyJwtSuperAdmin, checkRole("super-admin"), getCategories);
 
+router
+  .route("/admin/event")
+  .post(
+    verifyJwtAdmin,
+    checkRole("organizer"),
+    upload.single("event_pic"),
+    createEvent
+  );
+
+router
+  .route("/admin/event")
+  .get(verifyJwtAdmin, checkRole("organizer"), getEvents);
 export default router;

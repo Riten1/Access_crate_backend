@@ -4,7 +4,6 @@ const eventSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true,
   },
 
   event_pic: {
@@ -44,6 +43,11 @@ const eventSchema = new mongoose.Schema({
   interested: {
     type: Number,
     default: 0,
+  },
+  isEntryFree: {
+    type: Boolean,
+    default: false,
+    required: true,
   },
 });
 
