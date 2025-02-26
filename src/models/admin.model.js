@@ -37,7 +37,6 @@ const adminSchema = new mongoose.Schema(
     },
     contact_info: {
       type: String,
-      unique: true,
       default: null,
       trim: true,
     },
