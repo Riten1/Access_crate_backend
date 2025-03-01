@@ -30,10 +30,10 @@ const eventSchema = new mongoose.Schema({
     ref: "eventCategory",
     trim: true,
   },
-  status: {
-    type: String,
-    enum: ["active", "inactive"],
-    default: "active",
+  isActive: {
+    type: Boolean,
+    required: true,
+    default: false,
   },
   organizer: {
     type: mongoose.Schema.Types.ObjectId,
@@ -49,6 +49,13 @@ const eventSchema = new mongoose.Schema({
     default: false,
     required: true,
   },
+});
+
+eventSchema.pre("save", function (next) {
+  this.isActive = this.isEntryFree;
+  const currentDate = new Date();
+  this.isActive = this.isEntryFree && this.date > currentDate;
+  next();
 });
 
 const Event = mongoose.model("event", eventSchema);

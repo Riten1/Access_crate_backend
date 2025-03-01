@@ -45,6 +45,20 @@ export const createEvent = asyncHandler(async (req, res) => {
       .json(new ApiError(false, "Event Already exists", 400));
   }
 
+  const existingEvent = await Event.findOne({ date, venue });
+  if (existingEvent) {
+    return res
+      .status(400)
+      .json(
+        new ApiError(
+          false,
+          "An event at this venue on the same date already exists",
+          null,
+          400
+        )
+      );
+  }
+
   let event_pic_url = null;
   if (req.file) {
     const eventImageLocalFile = req.file.path;
@@ -58,10 +72,7 @@ export const createEvent = asyncHandler(async (req, res) => {
     event_pic_url = eventImageCloudinaryResponse.url;
   }
 
-  let status = "inactive";
-  if (isEntryFree) {
-    status = "active";
-  }
+  let isActive = isEntryFree ? true : false;
 
   try {
     const validCategory = await EventCategory.findById(category);
@@ -82,6 +93,16 @@ export const createEvent = asyncHandler(async (req, res) => {
       .status(500)
       .json(new ApiError(false, "Internal Server Error", null, 500));
   }
+  const currentDate = new Date();
+  const eventDate = new Date(date);
+
+  currentDate.setHours(0, 0, 0, 0);
+
+  if (eventDate < currentDate) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Event date cannot be in the past", null, 400));
+  }
 
   const event = await Event.create({
     name,
@@ -91,7 +112,7 @@ export const createEvent = asyncHandler(async (req, res) => {
     venue,
     category,
     isEntryFree,
-    status,
+    isActive,
     organizer: req.user._id,
   });
 
@@ -109,7 +130,8 @@ export const getEvents = asyncHandler(async (req, res) => {
     .populate({
       path: "organizer",
       select: "-__v -password -refreshtoken",
-    });
+    })
+    .select("-__v");
 
   if (!events) {
     return res
