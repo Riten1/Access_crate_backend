@@ -125,4 +125,8 @@ router
 router
   .route("/admin/event")
   .get(verifyJwtAdmin, checkRole("organizer"), getEvents);
+
+router
+  .route("/admin/event/categories")
+  .get(verifyJwtAdmin, checkRole("organizer"), getCategories);
 export default router;
