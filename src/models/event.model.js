@@ -5,7 +5,6 @@ const eventSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-
   event_pic: {
     type: String,
     default: null,
@@ -49,12 +48,35 @@ const eventSchema = new mongoose.Schema({
     default: false,
     required: true,
   },
+  eventType: {
+    type: String,
+    required: true,
+    enum: ["current", "upcoming", "past"],
+    default: "upcoming",
+  },
 });
 
 eventSchema.pre("save", function (next) {
-  this.isActive = this.isEntryFree;
   const currentDate = new Date();
-  this.isActive = this.isEntryFree && this.date > currentDate;
+  const eventDate = new Date(this.date);
+
+  currentDate.setHours(0, 0, 0, 0);
+  eventDate.setHours(0, 0, 0, 0);
+
+  if (eventDate < currentDate) {
+    this.eventType = "past";
+    this.isActive = false;
+  } else if (
+    eventDate.getTime() === currentDate.getTime() &&
+    (this.isEntryFree === true || this.isEntryFree === false)
+  ) {
+    this.eventType = "current";
+    this.isActive = true;
+  } else {
+    this.eventType = "upcoming";
+    this.isActive = false;
+  }
+
   next();
 });
 
