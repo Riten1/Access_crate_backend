@@ -54,6 +54,19 @@ const eventSchema = new mongoose.Schema({
     enum: ["current", "upcoming", "past"],
     default: "upcoming",
   },
+
+  isTicketsAvailable: {
+    type: Boolean,
+    default: false,
+    required: true,
+  },
+
+  tickets: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ticket",
+    },
+  ],
 });
 
 eventSchema.pre("save", function (next) {
@@ -76,6 +89,8 @@ eventSchema.pre("save", function (next) {
     this.eventType = "upcoming";
     this.isActive = false;
   }
+
+  this.isTicketsAvailable = this.tickets && this.tickets.length > 0;
 
   next();
 });

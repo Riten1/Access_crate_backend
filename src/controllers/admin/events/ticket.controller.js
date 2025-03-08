@@ -96,6 +96,13 @@ export const createTicket = asyncHandler(async (req, res) => {
   if (currentDate > new Date(sales_end_date)) {
     await Ticket.findByIdAndUpdate(newTicket._id, { isActive: false });
   }
+
+  
+  await Event.findByIdAndUpdate(eventId, {
+    isTicketsAvailable: true,
+    $push: { tickets: newTicket._id },
+  });
+
   return res
     .status(200)
     .json(new ApiResponse(true, "Ticket created successfully", newTicket, 201));
@@ -239,7 +246,7 @@ export const updateTicket = asyncHandler(async (req, res) => {
       quantity,
       sales_start_date,
       sales_end_date,
-      isActive,     
+      isActive,
     },
     { new: true }
   );

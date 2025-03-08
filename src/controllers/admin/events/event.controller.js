@@ -105,6 +105,7 @@ export const getEvents = asyncHandler(async (req, res) => {
         path: "organizer",
         select: "-__v -password -refreshtoken",
       })
+      .populate("tickets", "-__v -event -createdAt -updatedAt")
       .select("-__v");
 
     if (events.length === 0) {
@@ -131,7 +132,12 @@ export const getEvents = asyncHandler(async (req, res) => {
 });
 
 export const getCloserUpcomingEvents = asyncHandler(async (req, res) => {
-  const events = await Event.find({ eventType: "upcoming" })
+  const events = await Event.find({
+    eventType: "upcoming",
+    isTicketsAvailable: true,
+    tickets: { $exists: true, $not: { $size: 0 } },
+  })
+    .populate("tickets", "-__v -event -createdAt -updatedAt")
     .limit(4)
     .select("-__v");
 
