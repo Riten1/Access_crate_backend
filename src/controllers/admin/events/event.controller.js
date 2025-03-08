@@ -7,42 +7,26 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 export const createEvent = asyncHandler(async (req, res) => {
   const { name, description, date, venue, category, isEntryFree } = req.body;
 
-  if (!name) {
+  if (
+    !name ||
+    !req.file ||
+    !date ||
+    !venue ||
+    !category ||
+    isEntryFree === undefined
+  ) {
     return res
       .status(400)
-      .json(new ApiError(false, "Name is required", null, 400));
-  }
-  if (!req.file) {
-    return res
-      .status(400)
-      .json(new ApiError(false, "Event Picture is required", null, 400));
-  }
-  if (!date) {
-    return res
-      .status(400)
-      .json(new ApiError(false, "Event date is required", null, 400));
-  }
-  if (!venue) {
-    return res
-      .status(400)
-      .json(new ApiError(false, "Event venue is required", null, 400));
-  }
-  if (!category) {
-    return res
-      .status(400)
-      .json(new ApiError(false, "Event category is required", null, 400));
-  }
-  if (isEntryFree === undefined) {
-    return res
-      .status(400)
-      .json(new ApiError(false, "isEntryFree is required", null, 400));
+      .json(
+        new ApiError(false, "All required fields must be filled", null, 400)
+      );
   }
 
-  const duplicateEvent = await Event.findOne({ $or: [{ name }] });
+  const duplicateEvent = await Event.findOne({ name });
   if (duplicateEvent) {
     return res
       .status(400)
-      .json(new ApiError(false, "Event Already exists", 400));
+      .json(new ApiError(false, "Event already exists", null, 400));
   }
 
   const existingEvent = await Event.findOne({ date, venue });
@@ -72,8 +56,6 @@ export const createEvent = asyncHandler(async (req, res) => {
     event_pic_url = eventImageCloudinaryResponse.url;
   }
 
-  let isActive = isEntryFree ? true : false;
-
   try {
     const validCategory = await EventCategory.findById(category);
     if (!validCategory) {
@@ -82,26 +64,9 @@ export const createEvent = asyncHandler(async (req, res) => {
         .json(new ApiError(false, "Invalid category ID", null, 400));
     }
   } catch (error) {
-    if (error.name === "CastError") {
-      return res
-        .status(400)
-        .json(
-          new ApiError(false, `Invalid category ID: ${error.value}`, null, 400)
-        );
-    }
     return res
       .status(500)
       .json(new ApiError(false, "Internal Server Error", null, 500));
-  }
-  const currentDate = new Date();
-  const eventDate = new Date(date);
-
-  currentDate.setHours(0, 0, 0, 0);
-
-  if (eventDate < currentDate) {
-    return res
-      .status(400)
-      .json(new ApiError(false, "Event date cannot be in the past", null, 400));
   }
 
   const event = await Event.create({
@@ -112,7 +77,6 @@ export const createEvent = asyncHandler(async (req, res) => {
     venue,
     category,
     isEntryFree,
-    isActive,
     organizer: req.user._id,
   });
 
@@ -122,23 +86,64 @@ export const createEvent = asyncHandler(async (req, res) => {
 });
 
 export const getEvents = asyncHandler(async (req, res) => {
-  const events = await Event.find()
-    .populate({
-      path: "category",
-      select: "-__v",
-    })
-    .populate({
-      path: "organizer",
-      select: "-__v -password -refreshtoken",
-    })
-    .select("-__v");
+  const { eventType } = req.query;
+  const organizerId = req.user._id;
 
-  if (!events) {
+  if (!eventType || !["past", "current", "upcoming"].includes(eventType)) {
     return res
       .status(400)
-      .json(new ApiError(false, "Events not found", null, 400));
+      .json(new ApiError(false, "Invalid or missing eventType", null, 400));
   }
+
+  try {
+    const events = await Event.find({ eventType, organizer: organizerId })
+      .populate({
+        path: "category",
+        select: "-__v",
+      })
+      .populate({
+        path: "organizer",
+        select: "-__v -password -refreshtoken",
+      })
+      .select("-__v");
+
+    if (events.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiError(false, `No ${eventType} events found`, null, 404));
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiError(
+          true,
+          `${eventType} events fetched successfully`,
+          events,
+          200
+        )
+      );
+  } catch (error) {
+    return res
+      .status(500)
+      .json(new ApiError(false, "Internal Server Error", null, 500));
+  }
+});
+
+export const getCloserUpcomingEvents = asyncHandler(async (req, res) => {
+  const events = await Event.find({ eventType: "upcoming" })
+    .limit(4)
+    .select("-__v");
+
+  if (events.length === 0) {
+    return res
+      .status(404)
+      .json(new ApiError(false, `No upcoming events found`, null, 404));
+  }
+
   return res
     .status(200)
-    .json(new ApiError(true, "Events fetched successfully", events, 200));
+    .json(
+      new ApiError(true, "Upcoming events fetched successfully", events, 200)
+    );
 });

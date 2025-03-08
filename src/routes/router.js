@@ -37,8 +37,15 @@ import {
 } from "../controllers/super-admin/create-category.controller.js";
 import {
   createEvent,
+  getCloserUpcomingEvents,
   getEvents,
 } from "../controllers/admin/events/event.controller.js";
+import {
+  createTicket,
+  deleteTicket,
+  getTickets,
+  updateTicket,
+} from "../controllers/admin/events/ticket.controller.js";
 const router = Router();
 
 router.route("/auth/register").post(
@@ -129,4 +136,22 @@ router
 router
   .route("/admin/event/categories")
   .get(verifyJwtAdmin, checkRole("organizer"), getCategories);
+
+router
+  .route("/admin/event/:eventId/ticket")
+  .post(verifyJwtAdmin, checkRole("organizer"), createTicket);
+
+router
+  .route("/admin/event/:eventId/ticket")
+  .get(verifyJwtAdmin, checkRole("organizer"), getTickets);
+router
+  .route("/admin/event/:eventId/ticket/:ticketId")
+  .patch(verifyJwtAdmin, checkRole("organizer"), updateTicket);
+router
+  .route("/admin/event/:eventId/ticket/:ticketId")
+  .delete(verifyJwtAdmin, checkRole("organizer"), deleteTicket);
+
+router
+  .route("/upcomming-events")
+  .get(verifyJwt, checkRole("user"), getCloserUpcomingEvents);
 export default router;
