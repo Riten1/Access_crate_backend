@@ -36,6 +36,7 @@ export const createTicket = asyncHandler(async (req, res) => {
   }
 
   const ticket = await Ticket.findOne({
+    event: eventId,
     ticketType,
   });
 
@@ -97,7 +98,6 @@ export const createTicket = asyncHandler(async (req, res) => {
     await Ticket.findByIdAndUpdate(newTicket._id, { isActive: false });
   }
 
-  
   await Event.findByIdAndUpdate(eventId, {
     isTicketsAvailable: true,
     $push: { tickets: newTicket._id },

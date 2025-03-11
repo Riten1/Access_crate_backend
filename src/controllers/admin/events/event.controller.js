@@ -110,8 +110,8 @@ export const getEvents = asyncHandler(async (req, res) => {
 
     if (events.length === 0) {
       return res
-        .status(404)
-        .json(new ApiError(false, `No ${eventType} events found`, null, 404));
+        .status(200)
+        .json(new ApiError(false, `No ${eventType} events found`, null, 200));
     }
 
     return res
