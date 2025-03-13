@@ -100,6 +100,7 @@ export const createTicket = asyncHandler(async (req, res) => {
 
   await Event.findByIdAndUpdate(eventId, {
     isTicketsAvailable: true,
+    isActive: true,
     $push: { tickets: newTicket._id },
   });
 
@@ -117,9 +118,7 @@ export const getTickets = asyncHandler(async (req, res) => {
       .json(new ApiError(false, "Event ID is required", null, 400));
   }
 
-  const tickets = await Ticket.find({ event: eventId })
-    .populate("event", "-__v")
-    .select("-__v");
+  const tickets = await Ticket.find({ event: eventId }).select("-__v -event");
   return res
     .status(200)
     .json(new ApiResponse(true, "Tickets fetched successfully", tickets, 200));

@@ -151,7 +151,5 @@ router
   .route("/admin/event/:eventId/ticket/:ticketId")
   .delete(verifyJwtAdmin, checkRole("organizer"), deleteTicket);
 
-router
-  .route("/upcomming-events")
-  .get(verifyJwt, checkRole("user"), getCloserUpcomingEvents);
+router.route("/upcomming-events").get(getCloserUpcomingEvents);
 export default router;

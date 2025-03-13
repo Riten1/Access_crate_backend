@@ -54,13 +54,11 @@ const eventSchema = new mongoose.Schema({
     enum: ["current", "upcoming", "past"],
     default: "upcoming",
   },
-
   isTicketsAvailable: {
     type: Boolean,
     default: false,
     required: true,
   },
-
   tickets: [
     {
       type: mongoose.Schema.Types.ObjectId,
@@ -69,6 +67,7 @@ const eventSchema = new mongoose.Schema({
   ],
 });
 
+// Middleware to update eventType, isActive, and isTicketsAvailable before saving
 eventSchema.pre("save", function (next) {
   const currentDate = new Date();
   const eventDate = new Date(this.date);
@@ -79,10 +78,7 @@ eventSchema.pre("save", function (next) {
   if (eventDate < currentDate) {
     this.eventType = "past";
     this.isActive = false;
-  } else if (
-    eventDate.getTime() === currentDate.getTime() &&
-    (this.isEntryFree === true || this.isEntryFree === false)
-  ) {
+  } else if (eventDate.getTime() === currentDate.getTime()) {
     this.eventType = "current";
     this.isActive = true;
   } else {
@@ -90,7 +86,13 @@ eventSchema.pre("save", function (next) {
     this.isActive = false;
   }
 
+  // Check if tickets exist
   this.isTicketsAvailable = this.tickets && this.tickets.length > 0;
+
+  // Ensure that if tickets are available, isActive is also true
+  if (this.isTicketsAvailable) {
+    this.isActive = true;
+  }
 
   next();
 });

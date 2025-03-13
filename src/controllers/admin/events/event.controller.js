@@ -135,21 +135,40 @@ export const getCloserUpcomingEvents = asyncHandler(async (req, res) => {
   const events = await Event.find({
     eventType: "upcoming",
     isTicketsAvailable: true,
+    isActive: true,
     tickets: { $exists: true, $not: { $size: 0 } },
   })
     .populate("tickets", "-__v -event -createdAt -updatedAt")
+    .populate("category", "-__v")
+    .populate("organizer", "-__v -password -refreshtoken")
     .limit(4)
     .select("-__v");
 
   if (events.length === 0) {
     return res
-      .status(404)
+      .status(200)
       .json(new ApiError(false, `No upcoming events found`, null, 404));
   }
+
+  const eventsWithTicketRange = events.map((event) => {
+    const prices = event.tickets.map((ticket) => ticket.price);
+    const lowestPrice = Math.min(...prices);
+    const highestPrice = Math.max(...prices);
+
+    return {
+      ...event.toObject(),
+      ticketRange: { lowest: lowestPrice, highest: highestPrice },
+    };
+  });
 
   return res
     .status(200)
     .json(
-      new ApiError(true, "Upcoming events fetched successfully", events, 200)
+      new ApiError(
+        true,
+        "Upcoming events fetched successfully",
+        eventsWithTicketRange,
+        200
+      )
     );
 });
