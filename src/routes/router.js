@@ -38,7 +38,9 @@ import {
 import {
   createEvent,
   getCloserUpcomingEvents,
+  getEvent,
   getEvents,
+  getEventsUsers,
 } from "../controllers/admin/events/event.controller.js";
 import {
   createTicket,
@@ -132,6 +134,8 @@ router
 router
   .route("/admin/event")
   .get(verifyJwtAdmin, checkRole("organizer"), getEvents);
+router.route("/event").get(getEventsUsers);
+router.route("/event/:id").get(getEvent);
 
 router
   .route("/admin/event/categories")

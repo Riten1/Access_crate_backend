@@ -2,6 +2,7 @@ import EventCategory from "../../../models/category.model.js";
 import Event from "../../../models/event.model.js";
 import uploadOnCloudinary from "../../../services/cloudinary.js";
 import ApiError from "../../../utils/ApiError.js";
+import ApiResponse from "../../../utils/ApiResponse.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 
 export const createEvent = asyncHandler(async (req, res) => {
@@ -96,7 +97,10 @@ export const getEvents = asyncHandler(async (req, res) => {
   }
 
   try {
-    const events = await Event.find({ eventType, organizer: organizerId })
+    const events = await Event.find({
+      eventType,
+      organizer: organizerId,
+    })
       .populate({
         path: "category",
         select: "-__v",
@@ -130,6 +134,56 @@ export const getEvents = asyncHandler(async (req, res) => {
       .json(new ApiError(false, "Internal Server Error", null, 500));
   }
 });
+export const getEventsUsers = asyncHandler(async (req, res) => {
+  const { eventType } = req.query;
+
+  if (!eventType || !["past", "current", "upcoming"].includes(eventType)) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Invalid or missing eventType", null, 400));
+  }
+
+  try {
+    const events = await Event.find({
+      eventType,
+      date: { $gte: new Date() },
+    })
+
+      .populate("tickets", "-__v -event -createdAt -updatedAt")
+      .select("-__v -organizer -category");
+
+    const eventsWithTicketRange = events.map((event) => {
+      const prices = event.tickets.map((ticket) => ticket.price);
+      const lowestPrice = Math.min(...prices);
+      const highestPrice = Math.max(...prices);
+
+      return {
+        ...event.toObject(),
+        ticketRange: { lowest: lowestPrice, highest: highestPrice },
+      };
+    });
+    if (events.length === 0) {
+      return res
+        .status(200)
+        .json(new ApiError(false, `No ${eventType} events found`, null, 200));
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiError(
+          true,
+          `${eventType} events fetched successfully`,
+          eventsWithTicketRange,
+          200
+        )
+      );
+  } catch (error) {
+    return res
+      .status(500)
+      .json(new ApiError(false, "Internal Server Error", null, 500));
+  }
+});
 
 export const getCloserUpcomingEvents = asyncHandler(async (req, res) => {
   const events = await Event.find({
@@ -137,6 +191,7 @@ export const getCloserUpcomingEvents = asyncHandler(async (req, res) => {
     isTicketsAvailable: true,
     isActive: true,
     tickets: { $exists: true, $not: { $size: 0 } },
+    date: { $gte: new Date() },
   })
     .populate("tickets", "-__v -event -createdAt -updatedAt")
     .populate("category", "-__v")
@@ -171,4 +226,36 @@ export const getCloserUpcomingEvents = asyncHandler(async (req, res) => {
         200
       )
     );
+});
+
+export const getEvent = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Event ID is required", null, 400));
+  }
+
+  const event = await Event.findById(id)
+    .populate({
+      path: "category",
+      select: "-__v",
+    })
+    .populate({
+      path: "organizer",
+      select: "-__v -password -refreshtoken",
+    })
+    .populate("tickets", "-__v -event -createdAt -updatedAt")
+    .select("-__v");
+
+  if (!event) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Event not found", null, 400));
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(true, "Event fetched successfully", event, 200));
 });
