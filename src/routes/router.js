@@ -48,6 +48,10 @@ import {
   getTickets,
   updateTicket,
 } from "../controllers/admin/events/ticket.controller.js";
+import {
+  getAdminProfile,
+  updateAdminProfile,
+} from "../controllers/admin/admin-profile.controller.js";
 const router = Router();
 
 router.route("/auth/register").post(
@@ -156,4 +160,16 @@ router
   .delete(verifyJwtAdmin, checkRole("organizer"), deleteTicket);
 
 router.route("/upcomming-events").get(getCloserUpcomingEvents);
+
+router
+  .route("/admin/profile")
+  .get(verifyJwtAdmin, checkRole("organizer"), getAdminProfile);
+router
+  .route("/admin/profile")
+  .patch(
+    verifyJwtAdmin,
+    checkRole("organizer"),
+    upload.single("profile_pic"),
+    updateAdminProfile
+  );
 export default router;
