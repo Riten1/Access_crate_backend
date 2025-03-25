@@ -134,7 +134,7 @@ export const getEvents = asyncHandler(async (req, res) => {
       .json(new ApiError(false, "Internal Server Error", null, 500));
   }
 });
-export const getEventsUsers = asyncHandler(async (req, res) => {
+export const getFeaturedEvents = asyncHandler(async (req, res) => {
   const { eventType } = req.query;
 
   if (!eventType || !["past", "current", "upcoming"].includes(eventType)) {
@@ -147,21 +147,33 @@ export const getEventsUsers = asyncHandler(async (req, res) => {
     const events = await Event.find({
       eventType,
       date: { $gte: new Date() },
+      $or: [
+        { isTicketsAvailable: true }, 
+        {
+          isEntryFree: true,
+          isTicketsAvailable: false, 
+        },
+      ],
     })
-
+      .sort({ createdAt: -1 })
+      .limit(5)
       .populate("tickets", "-__v -event -createdAt -updatedAt")
       .select("-__v -organizer -category");
 
     const eventsWithTicketRange = events.map((event) => {
-      const prices = event.tickets.map((ticket) => ticket.price);
-      const lowestPrice = Math.min(...prices);
-      const highestPrice = Math.max(...prices);
+      const prices = event.tickets?.map((ticket) => ticket.price) || [];
+      const lowestPrice = prices.length > 0 ? Math.min(...prices) : 0;
+      const highestPrice = prices.length > 0 ? Math.max(...prices) : 0;
 
       return {
         ...event.toObject(),
-        ticketRange: { lowest: lowestPrice, highest: highestPrice },
+        ticketRange: {
+          lowest: lowestPrice,
+          highest: highestPrice,
+        },
       };
     });
+
     if (events.length === 0) {
       return res
         .status(200)

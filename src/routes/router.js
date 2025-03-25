@@ -40,7 +40,7 @@ import {
   getCloserUpcomingEvents,
   getEvent,
   getEvents,
-  getEventsUsers,
+  getFeaturedEvents,
 } from "../controllers/admin/events/event.controller.js";
 import {
   createTicket,
@@ -52,6 +52,10 @@ import {
   getAdminProfile,
   updateAdminProfile,
 } from "../controllers/admin/admin-profile.controller.js";
+import {
+  getTopTwoOrganizers,
+  remainingThreeTopOrganizers,
+} from "../controllers/user/organizers/organizers.controller.js";
 const router = Router();
 
 router.route("/auth/register").post(
@@ -138,7 +142,7 @@ router
 router
   .route("/admin/event")
   .get(verifyJwtAdmin, checkRole("organizer"), getEvents);
-router.route("/event").get(getEventsUsers);
+router.route("/event").get(getFeaturedEvents);
 router.route("/event/:id").get(getEvent);
 
 router
@@ -172,4 +176,7 @@ router
     upload.single("profile_pic"),
     updateAdminProfile
   );
+
+router.route("/top-two-organizers").get(getTopTwoOrganizers);
+router.route("/remaining-three-organizers").get(remainingThreeTopOrganizers);
 export default router;
