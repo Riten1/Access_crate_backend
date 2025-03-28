@@ -216,23 +216,40 @@ export const getOrganizerEvents = asyncHandler(async (req, res) => {
       );
   }
 
-  let organizerEvents = await Event.findOne({ organizer: id });
+  const organizerEvents = await Event.find({ organizer: id }).populate(
+    "tickets",
+    "-__v -event -createdAt -updatedAt"
+  );
+
+  let eventsWithTicketRange = organizerEvents.map((event) => {
+    const prices = event.tickets?.map((ticket) => ticket.price) || [];
+    const lowestPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    const highestPrice = prices.length > 0 ? Math.max(...prices) : 0;
+
+    return {
+      ...event.toObject(),
+      ticketRange: {
+        lowest: lowestPrice,
+        highest: highestPrice,
+      },
+    };
+  });
 
   if (eventType === "past") {
-    organizerEvents = await Event.find({
+    eventsWithTicketRange = await Event.find({
       organizer: id,
       date: { $lt: new Date() },
     });
   }
 
   if (eventType === "upcoming") {
-    organizerEvents = await Event.find({
+    eventsWithTicketRange = await Event.find({
       organizer: id,
       date: { $gte: new Date() },
     });
   }
 
-  if (!organizerEvents) {
+  if (!eventsWithTicketRange) {
     return res
       .status(400)
       .json(new ApiError(false, "Organizer not found", null, 400));
@@ -243,7 +260,7 @@ export const getOrganizerEvents = asyncHandler(async (req, res) => {
       true,
       "Organizer fetched successfully",
 
-      organizerEvents,
+      eventsWithTicketRange,
 
       200
     )
