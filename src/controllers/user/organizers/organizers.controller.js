@@ -1,4 +1,7 @@
 import Organizer from "../../../models/admin.model.js";
+import Event from "../../../models/event.model.js";
+import ApiError from "../../../utils/ApiError.js";
+import ApiResponse from "../../../utils/ApiResponse.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 
 export const getTopTwoOrganizers = asyncHandler(async (req, res) => {
@@ -95,11 +98,11 @@ export const remainingThreeTopOrganizers = asyncHandler(async (req, res) => {
         },
       },
     },
-    // Sort by event count descending
+
     { $sort: { total_events: -1 } },
-    // Skip the top 2 organizers
+
     { $skip: 2 },
-    // Limit to the next 3 organizers
+
     { $limit: 3 },
   ]);
 
@@ -108,4 +111,141 @@ export const remainingThreeTopOrganizers = asyncHandler(async (req, res) => {
     message: "Top 3 organizers (excluding top 2) fetched successfully",
     data: organizers,
   });
+});
+
+export const getOrganizer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Organizer ID is required", null, 400));
+  }
+
+  const organizers = await Organizer.aggregate([
+    {
+      $lookup: {
+        from: "events",
+        localField: "_id",
+        foreignField: "organizer",
+        as: "events",
+      },
+    },
+    {
+      $addFields: {
+        categoryIds: { $setUnion: "$events.category" },
+      },
+    },
+    {
+      $lookup: {
+        from: "eventcategories",
+        localField: "categoryIds",
+        foreignField: "_id",
+        as: "categoriesData",
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        organizer_name: 1,
+        email: 1,
+        profile_pic: 1,
+        owner_name: 1,
+        contact_info: 1,
+        total_events: { $size: "$events" },
+        createdAt: 1,
+        categories: {
+          $map: {
+            input: "$categoriesData",
+            as: "category",
+            in: "$$category.name",
+          },
+        },
+      },
+    },
+
+    {
+      $sort: { total_events: -1 },
+    },
+    {
+      $limit: 2,
+    },
+  ]);
+
+  organizers.find((organizer) => {
+    if (organizer._id == id) {
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            true,
+            "Organizer fetched successfully",
+            organizer,
+            200
+          )
+        );
+    }
+  });
+});
+
+export const getOrganizerEvents = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { eventType } = req.query;
+
+  if (!id) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Organizer ID is required", null, 400));
+  }
+  if (!eventType) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Event type is required", null, 400));
+  }
+
+  if (eventType !== "past" && eventType !== "upcoming") {
+    return res
+      .status(400)
+      .json(
+        new ApiError(
+          false,
+          "Invalid event type. Should be past or upcoming",
+          null,
+          400
+        )
+      );
+  }
+
+  let organizerEvents = await Event.findOne({ organizer: id });
+
+  if (eventType === "past") {
+    organizerEvents = await Event.find({
+      organizer: id,
+      date: { $lt: new Date() },
+    });
+  }
+
+  if (eventType === "upcoming") {
+    organizerEvents = await Event.find({
+      organizer: id,
+      date: { $gte: new Date() },
+    });
+  }
+
+  if (!organizerEvents) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Organizer not found", null, 400));
+  }
+
+  return res.status(200).json(
+    new ApiResponse(
+      true,
+      "Organizer fetched successfully",
+
+      organizerEvents,
+
+      200
+    )
+  );
 });

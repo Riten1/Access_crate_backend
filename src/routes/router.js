@@ -53,6 +53,8 @@ import {
   updateAdminProfile,
 } from "../controllers/admin/admin-profile.controller.js";
 import {
+  getOrganizer,
+  getOrganizerEvents,
   getTopTwoOrganizers,
   remainingThreeTopOrganizers,
 } from "../controllers/user/organizers/organizers.controller.js";
@@ -179,4 +181,6 @@ router
 
 router.route("/top-two-organizers").get(getTopTwoOrganizers);
 router.route("/remaining-three-organizers").get(remainingThreeTopOrganizers);
+router.route("/organizer/:id").get(getOrganizer);
+router.route("/organizer-events/:id").get(getOrganizerEvents);
 export default router;
