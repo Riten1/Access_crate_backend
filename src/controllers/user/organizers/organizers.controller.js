@@ -163,34 +163,31 @@ export const getOrganizer = asyncHandler(async (req, res) => {
         },
       },
     },
-
-    {
-      $sort: { total_events: -1 },
-    },
-    {
-      $limit: 2,
-    },
   ]);
 
-  organizers.find((organizer) => {
-    if (organizer._id == id) {
-      return res
-        .status(200)
-        .json(
-          new ApiResponse(
-            true,
-            "Organizer fetched successfully",
-            organizer,
-            200
-          )
-        );
-    }
-  });
+  console.log("Organizers:", organizers);
+
+  // Find the matching organizer (Remove `await` here)
+  const organizer = organizers.find((org) => org._id.toString() === id);
+
+  console.log("Organizer:", organizer);
+
+  if (!organizer) {
+    return res
+      .status(404)
+      .json(new ApiError(false, "Organizer not found", null, 404));
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(true, "Organizer fetched successfully", organizer, 200)
+    );
 });
 
 export const getOrganizerEvents = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { eventType } = req.query;
+  const { eventType, page = 1, limit = 10 } = req.query;
 
   if (!id) {
     return res
@@ -236,32 +233,39 @@ export const getOrganizerEvents = asyncHandler(async (req, res) => {
   });
 
   if (eventType === "past") {
-    eventsWithTicketRange = await Event.find({
-      organizer: id,
-      date: { $lt: new Date() },
-    });
+    eventsWithTicketRange = eventsWithTicketRange.filter(
+      (event) => event.date < new Date()
+    );
   }
 
   if (eventType === "upcoming") {
-    eventsWithTicketRange = await Event.find({
-      organizer: id,
-      date: { $gte: new Date() },
-    });
+    eventsWithTicketRange = eventsWithTicketRange.filter(
+      (event) => event.date > new Date()
+    );
   }
 
-  if (!eventsWithTicketRange) {
+  if (!eventsWithTicketRange.length) {
     return res
-      .status(400)
-      .json(new ApiError(false, "Organizer not found", null, 400));
+      .status(200)
+      .json(new ApiError(false, "No events found", [], 400));
   }
+
+  const totalEvents = eventsWithTicketRange.length;
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedEvents = eventsWithTicketRange.slice(startIndex, endIndex);
 
   return res.status(200).json(
     new ApiResponse(
       true,
-      "Organizer fetched successfully",
-
-      eventsWithTicketRange,
-
+      "Organizer events fetched successfully",
+      {
+        totalEvents,
+        currentPage: Number(page),
+        totalPages: Math.ceil(totalEvents / limit),
+        limit,
+        events: paginatedEvents,
+      },
       200
     )
   );
