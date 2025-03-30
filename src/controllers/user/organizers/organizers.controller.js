@@ -165,12 +165,12 @@ export const getOrganizer = asyncHandler(async (req, res) => {
     },
   ]);
 
-  console.log("Organizers:", organizers);
+
 
   // Find the matching organizer (Remove `await` here)
   const organizer = organizers.find((org) => org._id.toString() === id);
 
-  console.log("Organizer:", organizer);
+  
 
   if (!organizer) {
     return res

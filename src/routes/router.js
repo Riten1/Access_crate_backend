@@ -58,6 +58,7 @@ import {
   getTopTwoOrganizers,
   remainingThreeTopOrganizers,
 } from "../controllers/user/organizers/organizers.controller.js";
+import { getUserEvents } from "../controllers/user/events/user-events.controller.js";
 const router = Router();
 
 router.route("/auth/register").post(
@@ -128,9 +129,7 @@ router
   .route("/super-admin/event/create-category")
   .post(verifyJwtSuperAdmin, checkRole("super-admin"), createEventCategory);
 
-router
-  .route("/super-admin/event/categories")
-  .get(verifyJwtSuperAdmin, checkRole("super-admin"), getCategories);
+router.route("/event/categories").get(getCategories);
 
 router
   .route("/admin/event")
@@ -183,4 +182,6 @@ router.route("/top-two-organizers").get(getTopTwoOrganizers);
 router.route("/remaining-three-organizers").get(remainingThreeTopOrganizers);
 router.route("/organizer/:id").get(getOrganizer);
 router.route("/organizer-events/:id").get(getOrganizerEvents);
+router.route("/events").get(getUserEvents);
+// router.route("/event/categories").get(getCategories);
 export default router;
