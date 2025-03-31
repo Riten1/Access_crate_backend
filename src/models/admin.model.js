@@ -51,6 +51,18 @@ const adminSchema = new mongoose.Schema(
     otpExpires: {
       type: Date,
     },
+    instagram: {
+      type: String,
+      default: null,
+    },
+    facebook: {
+      type: String,
+      default: null,
+    },
+    youtube: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,
