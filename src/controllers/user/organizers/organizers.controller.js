@@ -152,6 +152,9 @@ export const getOrganizer = asyncHandler(async (req, res) => {
         profile_pic: 1,
         owner_name: 1,
         contact_info: 1,
+        instagram: 1,
+        facebook: 1,
+        youtube: 1,
         total_events: { $size: "$events" },
         createdAt: 1,
         categories: {
@@ -165,12 +168,8 @@ export const getOrganizer = asyncHandler(async (req, res) => {
     },
   ]);
 
-
-
   // Find the matching organizer (Remove `await` here)
   const organizer = organizers.find((org) => org._id.toString() === id);
-
-  
 
   if (!organizer) {
     return res
