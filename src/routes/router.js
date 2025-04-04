@@ -45,6 +45,7 @@ import {
 import {
   createTicket,
   deleteTicket,
+  getTicket,
   getTickets,
   updateTicket,
 } from "../controllers/admin/events/ticket.controller.js";
@@ -163,6 +164,9 @@ router
   .patch(verifyJwtAdmin, checkRole("organizer"), updateTicket);
 router
   .route("/admin/event/:eventId/ticket/:ticketId")
+  .get(verifyJwtAdmin, checkRole("organizer"), getTicket);
+router
+  .route("/admin/event/:eventId/ticket/:ticketId")
   .delete(verifyJwtAdmin, checkRole("organizer"), deleteTicket);
 
 router.route("/upcomming-events").get(getCloserUpcomingEvents);
@@ -184,6 +188,6 @@ router.route("/remaining-three-organizers").get(remainingThreeTopOrganizers);
 router.route("/organizer/:id").get(getOrganizer);
 router.route("/organizer-events/:id").get(getOrganizerEvents);
 router.route("/events").get(getUserEvents);
-router.route("/user-organizers").get(getUserOrganizers)
+router.route("/user-organizers").get(getUserOrganizers);
 // router.route("/event/categories").get(getCategories);
 export default router;

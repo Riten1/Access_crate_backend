@@ -23,7 +23,7 @@ export const createEvent = asyncHandler(async (req, res) => {
       );
   }
 
-  const duplicateEvent = await Event.findOne({ name });
+  const duplicateEvent = await Event.findOne({ name, isActive: true });
   if (duplicateEvent) {
     return res
       .status(400)
@@ -86,19 +86,34 @@ export const createEvent = asyncHandler(async (req, res) => {
     .json(new ApiError(true, "Event created successfully", event, 200));
 });
 
+const deactivateExpiredEvents = async () => {
+  const now = new Date();
+  await Event.updateMany(
+    { date: { $lt: now }, isActive: true },
+    { isActive: false }
+  );
+};
+
 export const getEvents = asyncHandler(async (req, res) => {
+  deactivateExpiredEvents();
   const { eventType } = req.query;
   const organizerId = req.user._id;
 
-  if (!eventType || !["past", "current", "upcoming"].includes(eventType)) {
+  if (eventType !== "past" && eventType !== "upcoming") {
     return res
       .status(400)
-      .json(new ApiError(false, "Invalid or missing eventType", null, 400));
+      .json(
+        new ApiError(
+          false,
+          "Invalid event type. Should be past or upcoming",
+          null,
+          400
+        )
+      );
   }
 
   try {
-    const events = await Event.find({
-      eventType,
+    let events = await Event.find({
       organizer: organizerId,
     })
       .populate({
@@ -112,10 +127,18 @@ export const getEvents = asyncHandler(async (req, res) => {
       .populate("tickets", "-__v -event -createdAt -updatedAt")
       .select("-__v");
 
-    if (events.length === 0) {
+    if (eventType === "past") {
+      events = events.filter((event) => event.date < new Date());
+    }
+
+    if (eventType === "upcoming") {
+      events = events.filter((event) => event.date > new Date());
+    }
+
+    if (!events.length) {
       return res
         .status(200)
-        .json(new ApiError(false, `No ${eventType} events found`, null, 200));
+        .json(new ApiError(false, "No events found", [], 400));
     }
 
     return res
@@ -148,10 +171,10 @@ export const getFeaturedEvents = asyncHandler(async (req, res) => {
       eventType,
       date: { $gte: new Date() },
       $or: [
-        { isTicketsAvailable: true }, 
+        { isTicketsAvailable: true },
         {
           isEntryFree: true,
-          isTicketsAvailable: false, 
+          isTicketsAvailable: false,
         },
       ],
     })

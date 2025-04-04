@@ -288,3 +288,33 @@ export const deleteTicket = asyncHandler(async (req, res) => {
       new ApiResponse(true, "Ticket deleted successfully", deletedTicket, 200)
     );
 });
+
+export const getTicket = asyncHandler(async (req, res) => {
+  const { ticketId, eventId } = req.params;
+
+  if (!ticketId) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Ticket Id is required", null, 400));
+  }
+  if (!eventId) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Event Id is required", null, 400));
+  }
+
+  const ticket = await Ticket.findById({
+    event: eventId,
+    _id: ticketId,
+  });
+
+  if (!ticket) {
+    return res
+      .status(200)
+      .json(new ApiResponse(false, "Ticket not found", null, 200));
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(true, "Ticket fetched successfully", ticket, 200));
+});
