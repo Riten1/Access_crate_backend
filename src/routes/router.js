@@ -187,7 +187,12 @@ router.route("/top-two-organizers").get(getTopTwoOrganizers);
 router.route("/remaining-three-organizers").get(remainingThreeTopOrganizers);
 router.route("/organizer/:id").get(getOrganizer);
 router.route("/organizer-events/:id").get(getOrganizerEvents);
+
 router.route("/events").get(getUserEvents);
 router.route("/user-organizers").get(getUserOrganizers);
+
+router
+  .route("/admin/:id/event", verifyJwtAdmin, checkRole("organizer"))
+  .get(getOrganizerEvents);
 // router.route("/event/categories").get(getCategories);
 export default router;

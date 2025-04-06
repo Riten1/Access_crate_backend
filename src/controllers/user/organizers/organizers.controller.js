@@ -185,7 +185,7 @@ export const getOrganizer = asyncHandler(async (req, res) => {
 
 export const getOrganizerEvents = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { eventType, page = 1, limit = 10 } = req.query;
+  const { eventType, page = 1, limit = 10, search } = req.query;
 
   if (!id) {
     return res
@@ -211,10 +211,9 @@ export const getOrganizerEvents = asyncHandler(async (req, res) => {
       );
   }
 
-  const organizerEvents = await Event.find({ organizer: id }).populate(
-    "tickets",
-    "-__v -event -createdAt -updatedAt"
-  );
+  const organizerEvents = await Event.find({ organizer: id })
+    .populate("tickets", "-__v -event -createdAt -updatedAt")
+    .populate("category", "-__v");
 
   let eventsWithTicketRange = organizerEvents.map((event) => {
     const prices = event.tickets?.map((ticket) => ticket.price) || [];
@@ -230,15 +229,25 @@ export const getOrganizerEvents = asyncHandler(async (req, res) => {
     };
   });
 
+  // ✅ Optional Search by Event Name
+  if (search) {
+    const searchRegex = new RegExp(search, "i"); // case-insensitive
+    eventsWithTicketRange = eventsWithTicketRange.filter((event) =>
+      searchRegex.test(event.name)
+    );
+  }
+
+  // ✅ Filter by Event Type
+  const now = new Date();
   if (eventType === "past") {
     eventsWithTicketRange = eventsWithTicketRange.filter(
-      (event) => event.date < new Date()
+      (event) => new Date(event.date) < now
     );
   }
 
   if (eventType === "upcoming") {
     eventsWithTicketRange = eventsWithTicketRange.filter(
-      (event) => event.date > new Date()
+      (event) => new Date(event.date) > now
     );
   }
 
