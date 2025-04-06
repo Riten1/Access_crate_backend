@@ -129,6 +129,18 @@ export const updateTicket = asyncHandler(async (req, res) => {
   let { ticketType, price, quantity, sales_start_date, sales_end_date } =
     req.body;
 
+  const duplicateTicket = await Ticket.findOne({
+    ticketType,
+    event: eventId,
+    _id: { $ne: ticketId },
+  });
+
+  if (duplicateTicket) {
+    return res
+      .status(400)
+      .json(new ApiError(false, "Ticket type already exists", null, 400));
+  }
+
   if (!ticketId) {
     return res
       .status(400)
