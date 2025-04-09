@@ -59,48 +59,30 @@ import mongoose from "mongoose";
 
 const paymentSchema = new mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "user",
-      required: true,
-    },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "event",
       required: true,
     },
-    ticket: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "ticket",
-      required: true,
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    amount: {
-      type: Number,
-      required: true,
-    },
-    esewaTransactionId: {
-      type: String,
-    },
+    paymentDetails: [
+      {
+        ticket: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "ticket",
+          required: true,
+        },
+        quantity: { type: Number, required: true },
+        price: { type: Number, required: true },
+      },
+    ],
+    totalAmount: { type: Number, required: true },
+    esewaTransactionId: { type: String },
     status: {
       type: String,
       enum: ["pending", "completed", "failed"],
       default: "pending",
     },
-    paymentDetails: [
-      {
-        ticket: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Ticket",
-          required: true,
-        },
-        quantity: { type: Number, required: true },
-      },
-    ],
   },
   { timestamps: true }
 );

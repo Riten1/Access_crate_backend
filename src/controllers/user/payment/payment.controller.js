@@ -118,61 +118,72 @@ export const initiateEsewaPayment = async (req, res) => {
     const { eventId, tickets, totalAmount } = req.body;
     const userId = req.user._id;
 
-    // Validate event exists
-    const event = await Event.findById(eventId);
-    console.log("Event", event);
-    if (!event) {
-      return res.status(404).json({ error: "Event not found" });
+    // Validate input
+    if (!tickets?.length) {
+      return res.status(400).json({ error: "At least one ticket required" });
     }
 
-    // Validate all tickets
+    // Validate event and tickets
+    const [event, ticketDocs] = await Promise.all([
+      Event.findById(eventId),
+      Ticket.find({ _id: { $in: tickets.map((t) => t.ticketId) } }),
+    ]);
+
+    if (!event) return res.status(404).json({ error: "Event not found" });
+
+    // Check ticket availability
     for (const item of tickets) {
-      const ticket = await Ticket.findById(item.ticketId);
-      if (!ticket) {
+      const ticket = ticketDocs.find((doc) => doc._id.equals(item.ticketId));
+      if (!ticket)
         return res
           .status(404)
           .json({ error: `Ticket ${item.ticketId} not found` });
-      }
       if (ticket.sold_count + item.quantity > ticket.quantity) {
         return res.status(400).json({
-          error: `Not enough ${ticket.ticketType} tickets available`,
+          error: `Only ${ticket.quantity - ticket.sold_count} ${ticket.ticketType} tickets left`,
         });
       }
     }
 
-    // Create payment record
+    // Create payment (assuming schema supports arrays)
     const payment = await Payment.create({
       user: userId,
       event: eventId,
-      amount: totalAmount,
-      status: "pending",
-      ticketDetails: tickets.map((t) => ({
-        ticket: t.ticketId, // Matches your schema
-        quantity: t.quantity, // Matches your schema
+      paymentDetails: tickets.map((t) => ({
+        ticket: t.ticketId,
+        quantity: t.quantity,
+        price: t.price, // make sure to send this from frontend or calculate from DB
       })),
+      totalAmount,
+      status: "pending",
     });
 
-    // Prepare eSewa payload
+    // eSewa integration
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"; // fallback if undefined
+
     const payload = {
       amount: totalAmount,
       tax_amount: 0,
       total_amount: totalAmount,
       transaction_uuid: payment._id.toString(),
       product_code: "EPAYTEST",
-      product_service_charge: 0,
-      product_delivery_charge: 0,
-      success_url: `${process.env.FRONTEND_URL}/events`,
-      failure_url: `${process.env.FRONTEND_URL}`,
+      success_url: `${frontendUrl}/events`,
+      failure_url: `${frontendUrl}`,
       signed_field_names: "total_amount,transaction_uuid,product_code",
     };
 
-    const esewaUrl = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
-    res.json({
-      paymentUrl: `${esewaUrl}?data=${JSON.stringify(payload)}`,
-      paymentId: payment._id,
-    });
+    // ⚠️ Encode the JSON payload before appending to URL
+    const encodedPayload = encodeURIComponent(JSON.stringify(payload));
+
+    const esewaUrl = `https://rc-epay.esewa.com.np/api/epay/main/v2/form?data=${encodedPayload}`;
+
+    res.json({ paymentUrl: esewaUrl, paymentId: payment._id });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Payment error:", error);
+    res.status(500).json({
+      error: error.message,
+      validationError: error.errors, // Mongoose validation details
+    });
   }
 };
 
