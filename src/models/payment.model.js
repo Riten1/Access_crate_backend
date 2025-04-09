@@ -1,3 +1,60 @@
+// import mongoose from "mongoose";
+
+// const paymentSchema = new mongoose.Schema(
+//   {
+//     user: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: "user",
+//       required: true,
+//     },
+//     event: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: "event",
+//       required: true,
+//     },
+//     ticket: [
+//       {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: "ticket",
+//         required: true,
+//       },
+//     ],
+//     amount: {
+//       type: Number,
+//       required: true,
+//     },
+//     khaltiIdx: {
+//       type: String,
+//     },
+//     status: {
+//       type: String,
+//       enum: ["initiated", "completed", "failed"],
+//       default: "initiated",
+//     },
+//     paymentDetails: {
+//       type: mongoose.Schema.Types.Mixed,
+//     },
+//   },
+//   {
+//     timestamps: true,
+//   }
+// );
+
+// // Update ticket sold_count after successful payment
+// paymentSchema.post("save", async function (doc) {
+//   if (doc.status === "completed") {
+//     const Ticket = mongoose.model("ticket");
+//     await Ticket.findByIdAndUpdate(doc.ticket, {
+//       $inc: { sold_count: 1 },
+//     });
+//   }
+// });
+
+// const Payment = mongoose.model("Payment", paymentSchema);
+
+// export default Payment;
+
+// models/payment.model.js
 import mongoose from "mongoose";
 
 const paymentSchema = new mongoose.Schema(
@@ -12,44 +69,42 @@ const paymentSchema = new mongoose.Schema(
       ref: "event",
       required: true,
     },
-    ticket: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "ticket",
-        required: true,
-      },
-    ],
+    ticket: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ticket",
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
     amount: {
       type: Number,
       required: true,
     },
-    khaltiIdx: {
+    esewaTransactionId: {
       type: String,
     },
     status: {
       type: String,
-      enum: ["initiated", "completed", "failed"],
-      default: "initiated",
+      enum: ["pending", "completed", "failed"],
+      default: "pending",
     },
-    paymentDetails: {
-      type: mongoose.Schema.Types.Mixed,
-    },
+    paymentDetails: [
+      {
+        ticket: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Ticket",
+          required: true,
+        },
+        quantity: { type: Number, required: true },
+      },
+    ],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Update ticket sold_count after successful payment
-paymentSchema.post("save", async function (doc) {
-  if (doc.status === "completed") {
-    const Ticket = mongoose.model("ticket");
-    await Ticket.findByIdAndUpdate(doc.ticket, {
-      $inc: { sold_count: 1 },
-    });
-  }
-});
-
-const Payment = mongoose.model("Payment", paymentSchema);
+const Payment = mongoose.model("payment", paymentSchema);
 
 export default Payment;

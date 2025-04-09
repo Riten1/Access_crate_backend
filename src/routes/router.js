@@ -62,9 +62,11 @@ import {
 } from "../controllers/user/organizers/organizers.controller.js";
 import { getUserEvents } from "../controllers/user/events/user-events.controller.js";
 import {
-  getPaymentHistory,
-  initiatePayment,
-  verifyPayment,
+  // getPaymentHistory,
+  initiateEsewaPayment,
+  // initiatePayment,
+  verifyEsewaPayment,
+  // verifyPayment,
 } from "../controllers/user/payment/payment.controller.js";
 const router = Router();
 
@@ -200,8 +202,15 @@ router
   .route("/admin/:id/event", verifyJwtAdmin, checkRole("organizer"))
   .get(getOrganizerEvents);
 
-router.post("/payment/initiate", verifyJwt, checkRole("user"), initiatePayment);
-router.post("/payment/verify", verifyJwt, checkRole("user"), verifyPayment);
-router.get("/payment/history", verifyJwt, checkRole("user"), getPaymentHistory);
+// router.post("/payment/initiate", verifyJwt, checkRole("user"), initiatePayment);
+// router.post("/payment/verify", verifyJwt, checkRole("user"), verifyPayment);
+// router.get("/payment/history", verifyJwt, checkRole("user"), getPaymentHistory);
+router.post(
+  "/esewa/initiate",
+  verifyJwt,
+  checkRole("user"),
+  initiateEsewaPayment
+);
+router.post("/esewa/verify", verifyJwt, checkRole("user"), verifyEsewaPayment);
 // router.route("/event/categories").get(getCategories);
 export default router;
