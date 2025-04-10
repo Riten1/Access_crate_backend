@@ -62,6 +62,7 @@ import {
 } from "../controllers/user/organizers/organizers.controller.js";
 import { getUserEvents } from "../controllers/user/events/user-events.controller.js";
 import {
+  getPaymentHistory,
   // getPaymentHistory,
   initiateEsewaPayment,
   // initiatePayment,
@@ -204,7 +205,7 @@ router
 
 // router.post("/payment/initiate", verifyJwt, checkRole("user"), initiatePayment);
 // router.post("/payment/verify", verifyJwt, checkRole("user"), verifyPayment);
-// router.get("/payment/history", verifyJwt, checkRole("user"), getPaymentHistory);
+router.get("/payment/history", verifyJwt, checkRole("user"), getPaymentHistory);
 router.post(
   "/esewa/initiate",
   verifyJwt,

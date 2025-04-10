@@ -94,136 +94,183 @@
 //   }
 // };
 
-// export const getPaymentHistory = async (req, res) => {
-//   try {
-//     const payments = await Payment.find({ user: req.user._id })
-//       .populate("event ticket")
-//       .sort({ createdAt: -1 });
-
-//     res.status(200).json({
-//       success: true,
-//       payments,
-//     });
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// };
-// controllers/payment.controller.js
-import Event from "../../../models/event.model.js";
-import Payment from "../../../models/payment.model.js";
-import Ticket from "../../../models/ticket.model.js";
-
-export const initiateEsewaPayment = async (req, res) => {
+export const getPaymentHistory = async (req, res) => {
   try {
-    const { eventId, tickets, totalAmount } = req.body;
-    const userId = req.user._id;
+    const payments = await Payment.find({ user: req.user._id })
+      .populate("event")
+      .sort({ createdAt: -1 });
 
-    // Validate input
-    if (!tickets?.length) {
-      return res.status(400).json({ error: "At least one ticket required" });
-    }
-
-    // Validate event and tickets
-    const [event, ticketDocs] = await Promise.all([
-      Event.findById(eventId),
-      Ticket.find({ _id: { $in: tickets.map((t) => t.ticketId) } }),
-    ]);
-
-    if (!event) return res.status(404).json({ error: "Event not found" });
-
-    // Check ticket availability
-    for (const item of tickets) {
-      const ticket = ticketDocs.find((doc) => doc._id.equals(item.ticketId));
-      if (!ticket)
-        return res
-          .status(404)
-          .json({ error: `Ticket ${item.ticketId} not found` });
-      if (ticket.sold_count + item.quantity > ticket.quantity) {
-        return res.status(400).json({
-          error: `Only ${ticket.quantity - ticket.sold_count} ${ticket.ticketType} tickets left`,
-        });
-      }
-    }
-
-    // Create payment (assuming schema supports arrays)
-    const payment = await Payment.create({
-      user: userId,
-      event: eventId,
-      paymentDetails: tickets.map((t) => ({
-        ticket: t.ticketId,
-        quantity: t.quantity,
-        price: t.price, // make sure to send this from frontend or calculate from DB
-      })),
-      totalAmount,
-      status: "pending",
+    res.status(200).json({
+      success: true,
+      payments,
     });
-
-    // eSewa integration
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"; // fallback if undefined
-
-    const payload = {
-      amount: totalAmount,
-      tax_amount: 0,
-      total_amount: totalAmount,
-      transaction_uuid: payment._id.toString(),
-      product_code: "EPAYTEST",
-      success_url: `${frontendUrl}/events`,
-      failure_url: `${frontendUrl}`,
-      signed_field_names: "total_amount,transaction_uuid,product_code",
-    };
-
-    // ⚠️ Encode the JSON payload before appending to URL
-    const encodedPayload = encodeURIComponent(JSON.stringify(payload));
-
-    const esewaUrl = `https://rc-epay.esewa.com.np/api/epay/main/v2/form?data=${encodedPayload}`;
-
-    res.json({ paymentUrl: esewaUrl, paymentId: payment._id });
-  } catch (error) {
-    console.error("Payment error:", error);
-    res.status(500).json({
-      error: error.message,
-      validationError: error.errors, // Mongoose validation details
-    });
-  }
-};
-
-export const verifyEsewaPayment = async (req, res) => {
-  try {
-    const { transaction_uuid, total_amount, status } = req.body;
-
-    // Find the payment record
-    const payment = await Payment.findById(transaction_uuid)
-      .populate("ticket")
-      .populate("event");
-
-    if (!payment) {
-      return res.status(404).json({ error: "Payment not found" });
-    }
-
-    // Verify amount matches
-    if (payment.amount !== parseFloat(total_amount)) {
-      return res.status(400).json({ error: "Amount mismatch" });
-    }
-
-    if (status === "COMPLETE") {
-      // Update payment status
-      payment.status = "completed";
-      payment.esewaTransactionId = req.body.transaction_code;
-      payment.paymentDetails = req.body;
-      await payment.save();
-
-      // Update ticket sold count
-      await Ticket.findByIdAndUpdate(payment.ticket._id, {
-        $inc: { sold_count: payment.quantity },
-      });
-
-      res.status(200).send("Payment verified successfully");
-    } else {
-      payment.status = "failed";
-      await payment.save();
-      res.status(400).send("Payment failed");
-    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+// controllers/payment.controller.js
+import Event from "../../../models/event.model.js";
+import Payment from "../../../models/payment.model.js";
+import Ticket from "../../../models/ticket.model.js";
+import { generateSignature } from "../../../utils/generateSignature.js";
+
+export const initiateEsewaPayment = async (req, res) => {
+  try {
+    const { eventId, tickets } = req.body;
+    const userId = req.user._id;
+    // Validate tickets and calculate total amount
+    let totalAmount = 0;
+    const paymentDetails = [];
+
+    for (const item of tickets) {
+      const ticket = await Ticket.findById(item.ticketId);
+      if (!ticket) {
+        return res
+          .status(404)
+          .json({ message: `Ticket ${item.ticketId} not found` });
+      }
+
+      // Check ticket availability
+      if (ticket.sold_count + item.quantity > ticket.quantity) {
+        return res.status(400).json({
+          message: `Not enough ${ticket.ticketType} tickets available`,
+        });
+      }
+
+      totalAmount += ticket.price * item.quantity;
+      paymentDetails.push({
+        ticket: item.ticketId,
+        quantity: item.quantity,
+        price: ticket.price,
+      });
+    }
+
+    // Create payment record
+    const payment = await Payment.create({
+      user: userId,
+      event: eventId,
+      paymentDetails,
+      totalAmount,
+      status: "pending",
+    });
+
+    await payment.save();
+
+    // Prepare eSewa parameters
+    const params = {
+      amount: totalAmount,
+      tax_amount: 0,
+      total_amount: totalAmount,
+      transaction_uuid: payment._id.toString(),
+      product_code: process.env.ESEWA_MERCHANT_CODE || "EPAYTEST",
+      product_service_charge: 0,
+      product_delivery_charge: 0,
+      success_url: `${process.env.FRONTEND_URL}/payment/success?pid=${payment._id}`,
+      failure_url: `${process.env.FRONTEND_URL}/payment/failure?pid=${payment._id}`,
+      signed_field_names: "total_amount,transaction_uuid,product_code",
+    };
+
+    // Generate signature
+    try {
+      // Generate signature with error handling
+      params.signature = generateSignature(params);
+    } catch (signatureError) {
+      console.error("Signature generation failed:", signatureError);
+      return res.status(500).json({
+        message: "Payment processing failed",
+        error: signatureError.message,
+      });
+    }
+
+    res.json({
+      paymentUrl: `${process.env.ESEWA_SANDBOX_URL}/epay/main`,
+      params,
+    });
+  } catch (error) {
+    console.error("Payment initiation error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// controllers/paymentController.ts
+export const verifyEsewaPayment = async (req, res) => {
+  try {
+    const { pid, oid, amt, refId } = req.query;
+
+    // Find payment with necessary relations
+    const payment = await Payment.findById(pid)
+      .populate("event")
+      .populate("paymentDetails.ticket");
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment not found",
+      });
+    }
+
+    // Verify with eSewa API
+    const verificationUrl = `${process.env.ESEWA_SANDBOX_URL}/api/epay/transaction/status`;
+    const verificationParams = {
+      amt: payment.totalAmount,
+      rid: refId,
+      pid: payment._id.toString(),
+      scd: process.env.ESEWA_MERCHANT_CODE || "EPAYTEST",
+    };
+
+    const verificationResponse = await axios.post(
+      verificationUrl,
+      verificationParams
+    );
+
+    if (verificationResponse.data.response_code === "Success") {
+      // Update payment status
+      payment.status = "completed";
+      payment.esewaTransactionId = oid;
+      await payment.save();
+
+      // Update ticket counts
+      for (const item of payment.paymentDetails) {
+        await Ticket.findByIdAndUpdate(item.ticket._id, {
+          $inc: { sold_count: item.quantity },
+        });
+      }
+
+      // Check event status
+      await checkEventStatus(payment.event._id);
+
+      return res.json({
+        success: true,
+        redirectUrl: `${process.env.FRONTEND_URL}/payment/success?pid=${pid}`,
+      });
+    } else {
+      payment.status = "failed";
+      await payment.save();
+      return res.json({
+        success: false,
+        redirectUrl: `${process.env.FRONTEND_URL}/payment/failure?pid=${pid}`,
+      });
+    }
+  } catch (error) {
+    console.error("Payment verification error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Helper function
+async function checkEventStatus(eventId) {
+  const event = await Event.findById(eventId).populate("tickets");
+  const allTicketsSold = event.tickets.every(
+    (ticket) => ticket.sold_count >= ticket.quantity
+  );
+
+  if (allTicketsSold) {
+    await Event.findByIdAndUpdate(eventId, {
+      isTicketsAvailable: false,
+      isActive: false,
+    });
+  }
+}
