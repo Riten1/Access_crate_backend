@@ -212,6 +212,10 @@ router.post(
   checkRole("user"),
   initiateEsewaPayment
 );
-router.post("/esewa/verify", verifyJwt, checkRole("user"), verifyEsewaPayment);
-// router.route("/event/categories").get(getCategories);
+// Handle both POST (frontend) and GET (eSewa callback)
+// Handle both verification methods
+router
+  .route("/esewa/verify", verifyJwt, checkRole("user"))
+  .get(verifyEsewaPayment) // For eSewa direct callbacks
+  .post(verifyEsewaPayment); // For internal API calls // For eSewa direct callbacks// router.route("/event/categories").get(getCategories);
 export default router;
